@@ -12,7 +12,7 @@
     "server": "tsx watch backend/server.ts",
     "start": "tsx backend/server.ts",
     "dev:all": "concurrently \"npm run dev\" \"npm run server\"",
-    "build": "tsc -b && vite build"
+    "build": "vite build"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.2",
