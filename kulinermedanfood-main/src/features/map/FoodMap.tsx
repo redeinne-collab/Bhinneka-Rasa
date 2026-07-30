@@ -17,6 +17,8 @@ import {
 } from 'lucide-react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
+import 'leaflet-routing-machine'
+import 'leaflet-routing-machine/dist/leaflet-routing-machine.css'
 
 import API_BASE_URL from '../../config/api'
 
@@ -137,6 +139,7 @@ function RoutingMachine({
 
   useEffect(() => {
     if (!map || !userLocation || !selected) return
+    if (!L.Routing || typeof L.Routing.control !== 'function') return
 
     const routingControl = L.Routing.control({
       waypoints: [
