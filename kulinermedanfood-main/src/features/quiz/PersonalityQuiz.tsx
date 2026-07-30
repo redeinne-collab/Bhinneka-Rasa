@@ -66,6 +66,65 @@ interface Question {
   options: Option[]
 }
 
+// Fallback data jika API backend tidak tersedia
+const LOCAL_QUESTIONS: Question[] = [
+  {
+    id: 1,
+    question_text: 'Apa yang paling menggambarkan caramu memulai pagi hari?',
+    options: [
+      { id: 1, option_text: 'Langsung gas, gak perlu pemanasan!', option_letter: 'A', food_target: 'KB' },
+      { id: 2, option_text: 'Santai sambil ngopi, baru mulai', option_letter: 'B', food_target: 'SM' },
+      { id: 3, option_text: 'Rapi dulu baru keluar rumah', option_letter: 'C', food_target: 'BM' },
+      { id: 4, option_text: 'Punya ritual unik yang gak bisa diganggu', option_letter: 'D', food_target: 'BA' },
+      { id: 5, option_text: 'Fleksibel, tergantung mood', option_letter: 'E', food_target: 'CF' }
+    ]
+  },
+  {
+    id: 2,
+    question_text: 'Bagaimana caramu menghadapi masalah besar?',
+    options: [
+      { id: 6, option_text: 'Langsung terjun, pikir belakangan', option_letter: 'A', food_target: 'KB' },
+      { id: 7, option_text: 'Tenang, cari solusi bareng teman', option_letter: 'B', food_target: 'SM' },
+      { id: 8, option_text: 'Buat rencana detail dulu', option_letter: 'C', food_target: 'BM' },
+      { id: 9, option_text: 'Analisis dari sudut pandang berbeda', option_letter: 'D', food_target: 'BA' },
+      { id: 10, option_text: 'Dibawa santai, pasti ada jalan', option_letter: 'E', food_target: 'CF' }
+    ]
+  },
+  {
+    id: 3,
+    question_text: 'Pilih suasana nongkrong yang paling kamu suka!',
+    options: [
+      { id: 11, option_text: 'Warung pinggir jalan yang ramai', option_letter: 'A', food_target: 'KB' },
+      { id: 12, option_text: 'Rumah teman sambil masak bareng', option_letter: 'B', food_target: 'SM' },
+      { id: 13, option_text: 'Restoran estetik buat foto-foto', option_letter: 'C', food_target: 'BM' },
+      { id: 14, option_text: 'Kafe unik yang jarang orang tahu', option_letter: 'D', food_target: 'BA' },
+      { id: 15, option_text: 'Di mana saja yang penting bareng', option_letter: 'E', food_target: 'CF' }
+    ]
+  },
+  {
+    id: 4,
+    question_text: 'Teman-temanmu biasanya datang ke kamu untuk?',
+    options: [
+      { id: 16, option_text: 'Minta dibelain kalau ada masalah', option_letter: 'A', food_target: 'KB' },
+      { id: 17, option_text: 'Curhat dan cari ketenangan', option_letter: 'B', food_target: 'SM' },
+      { id: 18, option_text: 'Minta saran tampilan atau event', option_letter: 'C', food_target: 'BM' },
+      { id: 19, option_text: 'Diskusi ide-ide kreatif yang out of the box', option_letter: 'D', food_target: 'BA' },
+      { id: 20, option_text: 'Teman jalan ke mana aja', option_letter: 'E', food_target: 'CF' }
+    ]
+  },
+  {
+    id: 5,
+    question_text: 'Kalau liburan, kamu pilih yang mana?',
+    options: [
+      { id: 21, option_text: 'Petualangan ekstrem, naik gunung atau arung jeram', option_letter: 'A', food_target: 'KB' },
+      { id: 22, option_text: 'Kampung halaman, ketemu keluarga besar', option_letter: 'B', food_target: 'SM' },
+      { id: 23, option_text: 'Kota mode atau destinasi wisata populer', option_letter: 'C', food_target: 'BM' },
+      { id: 24, option_text: 'Tempat tersembunyi yang belum banyak dikunjungi', option_letter: 'D', food_target: 'BA' },
+      { id: 25, option_text: 'Spontan aja, lihat nanti mau ke mana', option_letter: 'E', food_target: 'CF' }
+    ]
+  }
+]
+
 export default function PersonalityQuiz() {
   const { user, isAuthenticated } = useAuth()
   const navigate = useNavigate()
@@ -89,12 +148,18 @@ export default function PersonalityQuiz() {
       try {
         const res = await fetch(`${API_BASE_URL}/quiz?type=personality`)
         const data = await res.json()
-        if (data.success && Array.isArray(data.data)) {
+        if (data.success && Array.isArray(data.data) && data.data.length > 0) {
           const validQuestions = data.data.filter((q: Question) => Array.isArray(q.options) && q.options.length > 0)
-          setQuestions(validQuestions)
+          if (validQuestions.length > 0) {
+            setQuestions(validQuestions)
+            return
+          }
         }
+        // Fallback ke data lokal jika API tidak tersedia atau kosong
+        setQuestions(LOCAL_QUESTIONS)
       } catch (error) {
-        console.error('Error fetching quiz:', error)
+        console.error('Error fetching quiz, using local data:', error)
+        setQuestions(LOCAL_QUESTIONS)
       } finally {
         setLoading(false)
       }
