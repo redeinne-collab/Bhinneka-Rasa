@@ -1,28 +1,31 @@
 import Database from 'better-sqlite3';
 import path from 'path';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
+import fs from 'fs';
 import dotenv from 'dotenv';
 
-// Fix untuk ES Module
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+dotenv.config();
 
-// Load .env dari root folder (2 level di atas config/)
-dotenv.config({ path: path.join(__dirname, '../../.env') });
+// Gunakan process.cwd() agar path selalu relatif terhadap
+// working directory saat proses dijalankan (bukan lokasi file compiled).
+// Di Railway: cwd = /app/backend (karena start command cd ke backend)
+// Di local dev: cwd = folder backend juga (karena tsx dijalankan dari sana)
+const dbPathEnv = process.env.DB_PATH || '.database/foodmap.db';
 
-// Ambil DB_PATH dari .env, default ke '../database/foodmap.db' jika tidak ada
-const dbPathEnv = process.env.DB_PATH || '../database/foodmap.db';
+// Jika DB_PATH adalah absolute path, gunakan langsung.
+// Jika relative, resolve dari cwd.
+const resolvedDbPath = path.isAbsolute(dbPathEnv)
+  ? dbPathEnv
+  : path.resolve(process.cwd(), dbPathEnv);
 
-// Resolve path agar selalu benar relatif terhadap ROOT folder proyek
-// Kita hapus './' di depan jika ada, lalu gabungkan dengan root directory
-const rootDir = path.join(__dirname, '../../');
-const cleanDbPath = dbPathEnv.replace('./', '').replace('.\\', '');
-const resolvedDbPath = path.join(rootDir, cleanDbPath);
+// Pastikan direktori database ada (penting saat pertama kali deploy)
+const dbDir = path.dirname(resolvedDbPath);
+if (!fs.existsSync(dbDir)) {
+  fs.mkdirSync(dbDir, { recursive: true });
+}
 
 console.log('✅ Database path resolved to:', resolvedDbPath);
 
-// Inisialisasi database
+// Inisialisasi database (better-sqlite3 akan membuat file baru jika belum ada)
 const db = new Database(resolvedDbPath);
 
 // Aktifkan foreign keys
