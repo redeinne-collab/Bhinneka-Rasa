@@ -2,10 +2,10 @@
 nixPkgs = ["nodejs_20", "python3", "gcc", "gnumake"]
 
 [phases.install]
-cmds = ["npm install --prefix kulinermedanfood-main/backend"]
+cmds = ["npm install --prefix backend"]
 
 [phases.build]
-cmds = ["npm run build --prefix kulinermedanfood-main/backend"]
+cmds = ["npm run build --prefix backend"]
 
 [start]
-cmd = "cd kulinermedanfood-main/backend && node dist/scripts/initDb.js && npm start"
+cmd = "cd backend && node dist/scripts/initDb.js && npm start"
