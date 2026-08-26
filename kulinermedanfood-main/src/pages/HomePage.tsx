@@ -30,20 +30,28 @@ async function fetchDishes(): Promise<Food[]> {
   }
 }
 
-export default function HomePage() {
+export default function HomePage({ prefetchedFoods }: { prefetchedFoods?: Food[] | null }) {
   const navigate = useNavigate()
   const { isAuthenticated } = useAuth()
   const [showLoginModal, setShowLoginModal] = useState(false)
-  const [foods, setFoods] = useState<Food[]>([])
-  const [loading, setLoading] = useState(true)
+  // Jika sudah ada data prefetch dari App.tsx (dimuat paralel saat splash),
+  // langsung gunakan — tidak perlu fetch ulang, tidak ada loading
+  const [foods, setFoods] = useState<Food[]>(prefetchedFoods ?? [])
+  const [loading, setLoading] = useState(prefetchedFoods === null || prefetchedFoods === undefined)
   const [scrollY, setScrollY] = useState(0)
 
   useEffect(() => {
+    // Hanya fetch jika data prefetch belum tersedia
+    if (prefetchedFoods !== null && prefetchedFoods !== undefined) {
+      setFoods(prefetchedFoods)
+      setLoading(false)
+      return
+    }
     fetchDishes()
       .then(setFoods)
       .catch((e: unknown) => console.error('Error fetching dishes:', e))
       .finally(() => setLoading(false))
-  }, [])
+  }, [prefetchedFoods])
 
   useEffect(() => {
     const handleScroll = () => setScrollY(window.scrollY)

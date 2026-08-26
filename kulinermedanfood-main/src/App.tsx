@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route, useLocation, Navigate, Outlet } from 'react-router-dom'
 import { AppProvider } from './context/AppContext'
 import { AuthProvider, useAuth } from './context/AuthContext'
+import type { Food } from './types/food'
+import API_BASE_URL from './config/api'
 
 import SplashScreen from './components/SplashScreen'
 import Header from './components/Header'
@@ -77,10 +80,33 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 
 function AppContent() {
   const [showSplash, setShowSplash] = useState(true)
+  // Prefetch data dishes saat splash masih tampil, sehingga
+  // saat splash selesai data sudah siap (atau sudah timeout)
+  const [prefetchedFoods, setPrefetchedFoods] = useState<Food[] | null>(null)
 
   useEffect(() => {
-    const timer = setTimeout(() => setShowSplash(false), 2500)
-    return () => clearTimeout(timer)
+    // Fetch data paralel dengan splash screen (max 8 detik)
+    const controller = new AbortController()
+    const fetchTimeout = setTimeout(() => controller.abort(), 8000)
+
+    fetch(`${API_BASE_URL}/dishes`, { signal: controller.signal })
+      .then(r => r.json())
+      .then(result => {
+        clearTimeout(fetchTimeout)
+        if (result.success) setPrefetchedFoods(result.data)
+      })
+      .catch(() => {
+        clearTimeout(fetchTimeout)
+        setPrefetchedFoods([]) // set kosong agar tidak loading selamanya
+      })
+
+    // Splash selesai setelah 2.5 detik
+    const splashTimer = setTimeout(() => setShowSplash(false), 2500)
+    return () => {
+      clearTimeout(splashTimer)
+      clearTimeout(fetchTimeout)
+      controller.abort()
+    }
   }, [])
 
   if (showSplash) return <SplashScreen />
@@ -94,7 +120,7 @@ function AppContent() {
 
       {/* User */}
       <Route element={<UserLayout />}>
-        <Route path="/" element={<HomePage />} />
+        <Route path="/" element={<HomePage prefetchedFoods={prefetchedFoods} />} />
         <Route path="/menu" element={<MenuPage />} />
         <Route path="/chat" element={<ChatPage />} />
         <Route path="/search" element={<SearchPage />} />
