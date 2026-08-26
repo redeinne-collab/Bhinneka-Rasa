@@ -80,32 +80,39 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 
 function AppContent() {
   const [showSplash, setShowSplash] = useState(true)
-  // Prefetch data dishes saat splash masih tampil, sehingga
-  // saat splash selesai data sudah siap (atau sudah timeout)
   const [prefetchedFoods, setPrefetchedFoods] = useState<Food[] | null>(null)
 
   useEffect(() => {
-    // Fetch data paralel dengan splash screen (max 8 detik)
-    const controller = new AbortController()
-    const fetchTimeout = setTimeout(() => controller.abort(), 8000)
+    let cancelled = false
 
-    fetch(`${API_BASE_URL}/dishes`, { signal: controller.signal })
+    // Fetch paralel dengan splash, timeout 8 detik
+    const fetchTimeout = setTimeout(() => {
+      if (!cancelled) setPrefetchedFoods(prev => prev ?? [])
+    }, 8000)
+
+    fetch(`${API_BASE_URL}/dishes`)
       .then(r => r.json())
       .then(result => {
         clearTimeout(fetchTimeout)
-        if (result.success) setPrefetchedFoods(result.data)
+        if (!cancelled) {
+          setPrefetchedFoods(result.success ? result.data : [])
+        }
       })
       .catch(() => {
         clearTimeout(fetchTimeout)
-        setPrefetchedFoods([]) // set kosong agar tidak loading selamanya
+        if (!cancelled) setPrefetchedFoods([])
       })
 
     // Splash selesai setelah 2.5 detik
-    const splashTimer = setTimeout(() => setShowSplash(false), 2500)
+    const splashTimer = setTimeout(() => {
+      if (!cancelled) setShowSplash(false)
+    }, 2500)
+
     return () => {
+      cancelled = true
       clearTimeout(splashTimer)
       clearTimeout(fetchTimeout)
-      controller.abort()
+      // Tidak abort fetch — biarkan selesai di background
     }
   }, [])
 
