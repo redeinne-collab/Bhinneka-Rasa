@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { useState, useEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route, useLocation, Navigate, Outlet } from 'react-router-dom'
 import { AppProvider } from './context/AppContext'
 // build: 2026-08-26

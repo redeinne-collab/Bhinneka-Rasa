@@ -23,10 +23,15 @@ export default function SearchPage() {
   const navigate = useNavigate()
 
   useEffect(() => {
-    fetchDishes()
+    const controller = new AbortController()
+    fetchDishes(controller.signal)
       .then(setFoods)
-      .catch((e) => console.error('Error fetching dishes:', e))
+      .catch((e) => {
+        if (e instanceof Error && e.name === 'AbortError') return
+        console.error('Error fetching dishes:', e)
+      })
       .finally(() => setLoading(false))
+    return () => controller.abort()
   }, [])
 
   const categories = useMemo(() => {

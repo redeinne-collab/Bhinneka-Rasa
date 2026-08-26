@@ -5,8 +5,8 @@ import { ChefHat, UtensilsCrossed, SearchX, Filter, Grid3x3, List, ArrowUpDown }
 
 import API_BASE_URL from '../config/api'
 
-async function fetchDishes(): Promise<Food[]> {
-  const response = await fetch(`${API_BASE_URL}/dishes`)
+async function fetchDishes(signal?: AbortSignal): Promise<Food[]> {
+  const response = await fetch(`${API_BASE_URL}/dishes`, { signal })
   if (!response.ok) throw new Error(`Failed to fetch dishes: ${response.statusText}`)
   const result = await response.json()
   if (!result.success) throw new Error('API returned success: false')
@@ -21,10 +21,15 @@ export default function MenuPage() {
   const [sortBy, setSortBy] = useState<'name' | 'price'>('name')
 
   useEffect(() => {
-    fetchDishes()
+    const controller = new AbortController()
+    fetchDishes(controller.signal)
       .then(setFoods)
-      .catch((e: unknown) => console.error('Error fetching dishes:', e))
+      .catch((e: unknown) => {
+        if (e instanceof Error && e.name === 'AbortError') return
+        console.error('Error fetching dishes:', e)
+      })
       .finally(() => setLoading(false))
+    return () => controller.abort()
   }, [])
 
   const categories = useMemo(() => {

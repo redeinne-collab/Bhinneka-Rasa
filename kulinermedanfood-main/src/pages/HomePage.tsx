@@ -9,8 +9,8 @@ import { ChefHat, ArrowRight, Sparkles, TrendingUp, Award, Flame, Star, Utensils
 
 import API_BASE_URL from '../config/api'
 
-async function fetchDishes(): Promise<Food[]> {
-  const response = await fetch(`${API_BASE_URL}/dishes`)
+async function fetchDishes(signal?: AbortSignal): Promise<Food[]> {
+  const response = await fetch(`${API_BASE_URL}/dishes`, { signal })
   if (!response.ok) throw new Error('Failed to fetch dishes')
   const result = await response.json()
   if (!result.success) throw new Error('API returned success: false')
@@ -34,10 +34,15 @@ export default function HomePage({ prefetchedFoods }: { prefetchedFoods?: Food[]
       setLoading(false)
       return
     }
-    fetchDishes()
+    const controller = new AbortController()
+    fetchDishes(controller.signal)
       .then(setFoods)
-      .catch((e: unknown) => console.error('Error fetching dishes:', e))
+      .catch((e: unknown) => {
+        if (e instanceof Error && e.name === 'AbortError') return
+        console.error('Error fetching dishes:', e)
+      })
       .finally(() => setLoading(false))
+    return () => controller.abort()
   }, [prefetchedFoods])
 
   useEffect(() => {
