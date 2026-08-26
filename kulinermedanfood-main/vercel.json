@@ -1,7 +1,6 @@
 {
-  "buildCommand": "vite build",
+  "buildCommand": "npm install && vite build",
   "outputDirectory": "dist",
-  "installCommand": "npm install",
   "framework": "vite",
   "rewrites": [
     { "source": "/(.*)", "destination": "/" }
