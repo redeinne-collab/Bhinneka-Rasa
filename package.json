@@ -9,10 +9,9 @@
   },
   "scripts": {
     "dev": "vite",
-    "server": "tsx watch backend/server.ts",
-    "start": "tsx backend/server.ts",
-    "dev:all": "concurrently \"npm run dev\" \"npm run server\"",
-    "build": "tsc -b && vite build"
+    "build": "tsc --noEmit false && vite build",
+    "preview": "vite preview",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.2",
