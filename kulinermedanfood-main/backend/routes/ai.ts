@@ -2,13 +2,16 @@ import { Router } from 'express'
 import Groq from 'groq-sdk'
 
 const router = Router()
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
 
 router.post('/generate-recipe', async (req, res) => {
   const { name, category } = req.body
   if (!name) return res.status(400).json({ success: false, message: 'Nama menu wajib diisi' })
+  if (!process.env.GROQ_API_KEY) {
+    return res.status(500).json({ success: false, message: 'GROQ_API_KEY belum diset' })
+  }
 
   try {
+    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
     const completion = await groq.chat.completions.create({
       model: 'openai/gpt-oss-120b',
       temperature: 0.7,
