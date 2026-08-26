@@ -6,23 +6,11 @@ import { ChefHat, UtensilsCrossed, SearchX, Filter, Grid3x3, List, ArrowUpDown }
 import API_BASE_URL from '../config/api'
 
 async function fetchDishes(): Promise<Food[]> {
-  const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), 8000)
-  try {
-    const response = await fetch(`${API_BASE_URL}/dishes`, { signal: controller.signal })
-    clearTimeout(timeoutId)
-    if (!response.ok) {
-      throw new Error(`Failed to fetch dishes: ${response.statusText}`)
-    }
-    const result = await response.json()
-    if (!result.success) {
-      throw new Error('API returned success: false')
-    }
-    return result.data as Food[]
-  } catch (err) {
-    clearTimeout(timeoutId)
-    throw err
-  }
+  const response = await fetch(`${API_BASE_URL}/dishes`)
+  if (!response.ok) throw new Error(`Failed to fetch dishes: ${response.statusText}`)
+  const result = await response.json()
+  if (!result.success) throw new Error('API returned success: false')
+  return result.data as Food[]
 }
 
 export default function MenuPage() {

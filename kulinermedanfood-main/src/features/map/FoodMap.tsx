@@ -187,24 +187,20 @@ export default function FoodMap() {
   const [isListCollapsed, setIsListCollapsed] = useState(false)
 
   useEffect(() => {
+    let cancelled = false
     async function fetchRestaurants() {
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 8000)
       try {
-        const response = await fetch(`${API_BASE_URL}/restaurants`, { signal: controller.signal })
-        clearTimeout(timeoutId)
+        const response = await fetch(`${API_BASE_URL}/restaurants`)
         const result = await response.json()
-        if (result.success) {
-          setRestaurants(result.data)
-        }
+        if (!cancelled && result.success) setRestaurants(result.data)
       } catch (error) {
-        clearTimeout(timeoutId)
-        console.error('Error fetching restaurants:', error)
+        if (!cancelled) console.error('Error fetching restaurants:', error)
       } finally {
-        setLoading(false)
+        if (!cancelled) setLoading(false)
       }
     }
     fetchRestaurants()
+    return () => { cancelled = true }
   }, [])
 
   function requestLocation() {
