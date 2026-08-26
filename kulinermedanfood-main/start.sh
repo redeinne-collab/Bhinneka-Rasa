@@ -1,17 +1,18 @@
 #!/bin/sh
-# Auto-detect backend directory path
-if [ -d "/app/kulinermedanfood-main/backend/dist" ]; then
-  BACKEND="/app/kulinermedanfood-main/backend"
-elif [ -d "/app/backend/dist" ]; then
-  BACKEND="/app/backend"
-else
-  echo "❌ Cannot find backend/dist directory. Build may have failed."
-  echo "Contents of /app:"
-  ls /app
-  exit 1
-fi
+# Railway clones repo ke /app — struktur: /app/backend/dist/
+BACKEND="/app/backend"
 
-echo "✅ Found backend at: $BACKEND"
-cd "$BACKEND"
+echo "✅ Starting backend from: $BACKEND"
+echo "📁 Contents of /app:"
+ls /app
+
+cd "$BACKEND" || { echo "❌ Cannot cd to $BACKEND"; exit 1; }
+
+echo "📁 Contents of $BACKEND:"
+ls .
+
+echo "⚙️ Running initDb..."
 node dist/scripts/initDb.js
+
+echo "🚀 Starting server..."
 node dist/server.js
