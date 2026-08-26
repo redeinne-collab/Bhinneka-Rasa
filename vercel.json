@@ -1,0 +1,8 @@
+{
+  "buildCommand": "cd kulinermedanfood-main && npm install && npx vite build",
+  "outputDirectory": "kulinermedanfood-main/dist",
+  "framework": null,
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/" }
+  ]
+}
