@@ -8,7 +8,7 @@ import reviewsRouter from './routes/reviews.js';
 import quizRouter from './routes/quiz.js'; 
 import quizResultsRouter from './routes/quizResults.js';
 import adminRouter from './routes/admin.js';
-import aiRoutes from './routes/ai';
+import aiRoutes from './routes/ai.js';
 
 dotenv.config();
 
