@@ -1,409 +1,536 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
-import { Utensils, ChefHat, ChevronDown, ChevronUp, Clock, Flame, BookOpen, Star, Play, Pause, Square, Volume2, VolumeX } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
+import { useApp } from '../../context/AppContext'
+import { useAuth } from '../../context/AuthContext'
+import { fetchDishById } from '../../services/dishApi'
+import { fetchReviewsByFoodId, submitReview } from '../../services/reviewApi'
+import LoginModal from '../../components/LoginModal'
+import { ChevronDown, ChevronUp, Star, MapPin, Clock, Heart, ArrowLeft, Share2, UtensilsCrossed, X, ExternalLink } from 'lucide-react'
+import type { Food } from '../../types/food'
+import type { Review } from '../../types/review'
 
-interface Dish {
-  id: number
-  name: string
-  cooking_steps: string[]
-  history?: string
-  journey?: string
+interface MapModalProps {
+  place: { name: string; address: string; mapsUrl: string }
+  onClose: () => void
 }
 
-import API_BASE_URL from '../../config/api'
+function MapModal({ place, onClose }: MapModalProps) {
+  // Buat embed URL dari nama + alamat
+  const query = encodeURIComponent(`${place.name}, ${place.address}`)
+  const embedUrl = `https://maps.google.com/maps?q=${query}&output=embed&hl=id`
 
-// ─── Audio Player Hook ───────────────────────────────────────────────────────
-function useSpeech() {
-  const [speaking, setSpeaking] = useState(false)
-  const [paused, setPaused] = useState(false)
-  const [currentStep, setCurrentStep] = useState<number | null>(null)
-  const [activeDishId, setActiveDishId] = useState<number | null>(null)
-  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null)
-  const stepsRef = useRef<string[]>([])
-  const stepIdxRef = useRef<number>(0)
-  const dishIdRef = useRef<number | null>(null)
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      <div
+        className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col"
+        style={{ maxHeight: '90vh' }}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-orange-500 to-amber-500 text-white flex-shrink-0">
+          <div className="flex items-center gap-2 min-w-0">
+            <MapPin className="w-5 h-5 flex-shrink-0" />
+            <div className="min-w-0">
+              <p className="font-bold text-sm truncate">{place.name}</p>
+              <p className="text-xs text-white/80 truncate">{place.address}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0 ml-3">
+            <a
+              href={place.mapsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-xl text-xs font-semibold transition-all"
+            >
+              <ExternalLink className="w-3.5 h-3.5" /> Buka Maps
+            </a>
+            <button onClick={onClose} className="w-8 h-8 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center transition-all">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
 
-  const stopAll = useCallback(() => {
-    window.speechSynthesis.cancel()
-    setSpeaking(false)
-    setPaused(false)
-    setCurrentStep(null)
-    setActiveDishId(null)
-    utteranceRef.current = null
-  }, [])
+        {/* Map iframe */}
+        <div className="flex-1 relative" style={{ minHeight: '400px' }}>
+          <iframe
+            src={embedUrl}
+            width="100%"
+            height="100%"
+            style={{ border: 0, minHeight: '400px', display: 'block' }}
+            allowFullScreen
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
+            title={place.name}
+          />
+        </div>
 
-  const speakStep = useCallback((text: string, stepIdx: number, dishId: number, onEnd?: () => void) => {
-    window.speechSynthesis.cancel()
-    const utter = new SpeechSynthesisUtterance(text)
-    utter.lang = 'id-ID'
-    utter.rate = 0.9
-    utter.pitch = 1.05
-    utter.volume = 1
-
-    // Pilih suara bahasa Indonesia jika tersedia
-    const voices = window.speechSynthesis.getVoices()
-    const idVoice = voices.find(v => v.lang.startsWith('id')) || voices.find(v => v.lang.startsWith('ms'))
-    if (idVoice) utter.voice = idVoice
-
-    utter.onstart = () => { setSpeaking(true); setPaused(false); setCurrentStep(stepIdx); setActiveDishId(dishId) }
-    utter.onend = () => { if (onEnd) onEnd(); else { setSpeaking(false); setPaused(false); setCurrentStep(null); setActiveDishId(null) } }
-    utter.onerror = () => { setSpeaking(false); setPaused(false); setCurrentStep(null) }
-
-    utteranceRef.current = utter
-    window.speechSynthesis.speak(utter)
-  }, [])
-
-  const playAll = useCallback((steps: string[], dishId: number, startFrom = 0) => {
-    stepsRef.current = steps
-    stepIdxRef.current = startFrom
-    dishIdRef.current = dishId
-
-    const playNext = () => {
-      const idx = stepIdxRef.current
-      if (idx >= stepsRef.current.length) {
-        setSpeaking(false); setPaused(false); setCurrentStep(null); setActiveDishId(null)
-        return
-      }
-      speakStep(`Langkah ${idx + 1}. ${stepsRef.current[idx]}`, idx, dishId, () => {
-        stepIdxRef.current = idx + 1
-        setTimeout(playNext, 600)
-      })
-    }
-    playNext()
-  }, [speakStep])
-
-  const playSingleStep = useCallback((text: string, stepIdx: number, dishId: number) => {
-    speakStep(`Langkah ${stepIdx + 1}. ${text}`, stepIdx, dishId)
-  }, [speakStep])
-
-  const togglePause = useCallback(() => {
-    if (paused) {
-      window.speechSynthesis.resume()
-      setPaused(false)
-    } else {
-      window.speechSynthesis.pause()
-      setPaused(true)
-    }
-  }, [paused])
-
-  // Bersihkan saat unmount
-  useEffect(() => () => { window.speechSynthesis.cancel() }, [])
-
-  return { speaking, paused, currentStep, activeDishId, playAll, playSingleStep, togglePause, stopAll }
-}
-
-// ─── Main Component ───────────────────────────────────────────────────────────
-export default function LangkahMemasak() {
-  const [dishes, setDishes] = useState<Dish[]>([])
-  const [selectedDish, setSelectedDish] = useState<number | null>(null)
-  const [loading, setLoading] = useState(true)
-  const speech = useSpeech()
-
-  useEffect(() => { fetchDishes() }, [])
-
-  async function fetchDishes() {
-    try {
-      setLoading(true)
-      const res = await fetch(`${API_BASE_URL}/dishes`)
-      const data = await res.json()
-      setDishes(data.data || [])
-    } catch (err) {
-      console.error('Error fetching dishes:', err)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleToggleDish = (dishId: number) => {
-    if (selectedDish === dishId) {
-      speech.stopAll()
-      setSelectedDish(null)
-    } else {
-      speech.stopAll()
-      setSelectedDish(dishId)
-    }
-  }
-
-  const FontImport = () => (
-    <style>{`
-      @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
-      .font-serif { font-family: 'Playfair Display', serif; }
-      .font-sans { font-family: 'Plus Jakarta Sans', sans-serif; }
-      @keyframes float { 0%,100%{transform:translateY(0) rotate(0)} 50%{transform:translateY(-20px) rotate(5deg)} }
-      @keyframes float-reverse { 0%,100%{transform:translateY(0) rotate(0)} 50%{transform:translateY(20px) rotate(-5deg)} }
-      @keyframes shimmer { 0%{background-position:-1000px 0} 100%{background-position:1000px 0} }
-      @keyframes pulse-glow { 0%,100%{opacity:.4;transform:scale(1)} 50%{opacity:.6;transform:scale(1.05)} }
-      @keyframes speaking-pulse { 0%,100%{box-shadow:0 0 0 0 rgba(251,146,60,0.7)} 50%{box-shadow:0 0 0 12px rgba(251,146,60,0)} }
-      .animate-float{animation:float 6s ease-in-out infinite}
-      .animate-float-reverse{animation:float-reverse 7s ease-in-out infinite}
-      .animate-pulse-glow{animation:pulse-glow 4s ease-in-out infinite}
-      .animate-speaking{animation:speaking-pulse 1.2s ease-in-out infinite}
-      .shimmer-bg{background:linear-gradient(90deg,transparent,rgba(255,255,255,.1),transparent);background-size:1000px 100%;animation:shimmer 3s infinite}
-    `}</style>
+        {/* Footer */}
+        <div className="px-5 py-3 bg-gray-50 border-t border-gray-100 flex items-center justify-between flex-shrink-0">
+          <p className="text-xs text-gray-500">📍 Klik pin di peta untuk petunjuk arah</p>
+          <button
+            onClick={onClose}
+            className="flex items-center gap-1.5 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-sm font-semibold transition-all"
+          >
+            <ArrowLeft className="w-4 h-4" /> Kembali
+          </button>
+        </div>
+      </div>
+    </div>
   )
+}
+
+export default function FoodDetail() {
+  const { id } = useParams()
+  const navigate = useNavigate()
+  const { addToFavorites, favorites } = useApp()
+  const { isAuthenticated, user } = useAuth()
+
+  const [food, setFood] = useState<Food | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [showLogin, setShowLogin] = useState(false)
+  const [loginIntent, setLoginIntent] = useState<'favorite' | 'review' | null>(null)
+  const [reviews, setReviews] = useState<Review[]>([])
+  const [reviewsLoading, setReviewsLoading] = useState(true)
+  const [showReviewForm, setShowReviewForm] = useState(false)
+  const [newRating, setNewRating] = useState(5)
+  const [newComment, setNewComment] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+    deskripsi: true,
+  })
+  const [mapModal, setMapModal] = useState<{ name: string; address: string; mapsUrl: string } | null>(null)
+
+  const toggleSection = (section: string) => {
+    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }))
+  }
+
+  useEffect(() => {
+    if (!id) { setLoading(false); return }
+    fetchDishById(id)
+      .then(setFood)
+      .catch((e: unknown) => console.error('Error fetching dish:', e))
+      .finally(() => setLoading(false))
+  }, [id])
+
+  useEffect(() => {
+    if (!id) { setReviewsLoading(false); return }
+    fetchReviewsByFoodId(id)
+      .then(setReviews)
+      .catch((e: unknown) => console.error('Error fetching reviews:', e))
+      .finally(() => setReviewsLoading(false))
+  }, [id])
+
+  const isFavorite = food ? favorites.includes(food.id) : false
+  const hasReviews = reviews.length > 0
+  const avgRating = hasReviews ? (reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / reviews.length).toFixed(1) : null
+
+  function handleFavoriteClick() {
+    if (!food) return
+    if (isAuthenticated) addToFavorites(food.id)
+    else { setLoginIntent('favorite'); setShowLogin(true) }
+  }
+
+  function handleWriteReviewClick() {
+    if (isAuthenticated && user) {
+      setShowReviewForm(true)
+      setTimeout(() => {
+        document.getElementById('ulasan-section')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }, 100)
+    } else {
+      setLoginIntent('review')
+      setShowLogin(true)
+    }
+  }
+
+  function handleLoginSuccess() {
+    setShowLogin(false)
+    if (loginIntent === 'favorite' && food) addToFavorites(food.id)
+    else if (loginIntent === 'review') {
+      setShowReviewForm(true)
+      setTimeout(() => document.getElementById('ulasan-section')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100)
+    }
+    setLoginIntent(null)
+  }
+
+  async function handleSubmitReview() {
+    if (!food || !user || !newComment.trim()) {
+      console.error('Validasi gagal:', { food: !!food, user: !!user, hasComment: !!newComment.trim() })
+      return
+    }
+
+    setSubmitting(true)
+    try {
+      const userName = user.name || user.username || user.user_name || 'User'
+
+      const created = await submitReview({
+        restaurant_id: Number(food.id),
+        user_id: user.id,
+        user_name: userName,
+        user_avatar: user.avatar || user.user_avatar || null,
+        rating: newRating,
+        comment: newComment.trim(),
+      })
+
+      setReviews((prev) => [created, ...prev])
+      setNewComment('')
+      setNewRating(5)
+      setShowReviewForm(false)
+    } catch (e: unknown) {
+      console.error('Error submitting review:', e)
+      alert('Gagal mengirim ulasan. Silakan coba lagi.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-stone-100 font-sans flex items-center justify-center relative overflow-hidden">
-        <FontImport />
-        <div className="absolute inset-0">
-          <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-amber-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse"></div>
-          <div className="absolute bottom-1/4 right-1/4 w-64 h-64 bg-orange-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse delay-1000"></div>
-        </div>
-        <div className="text-center space-y-6 relative z-10">
-          <div className="relative w-24 h-24 mx-auto">
-            <div className="absolute inset-0 border-4 border-amber-200 rounded-full"></div>
-            <div className="absolute inset-0 border-4 border-amber-600 rounded-full border-t-transparent animate-spin"></div>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <ChefHat className="w-10 h-10 text-amber-700 animate-pulse" />
-            </div>
-          </div>
-          <div>
-            <p className="text-amber-800 font-bold text-lg">Menyiapkan resep rahasia...</p>
-            <p className="text-amber-600 text-sm mt-2">Mohon tunggu sebentar</p>
-          </div>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 to-amber-50">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-orange-200 border-t-orange-500 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-orange-800 font-medium">Memuat detail kuliner...</p>
         </div>
       </div>
     )
   }
 
+  if (!food) return <div className="min-h-screen flex items-center justify-center text-gray-500">Makanan tidak ditemukan</div>
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-stone-100 font-sans relative overflow-hidden">
-      <FontImport />
-
-      {/* Background */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute inset-0 opacity-40">
-          <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-amber-200/30 via-transparent to-orange-200/30"></div>
-          <div className="absolute top-1/3 right-0 w-96 h-96 bg-gradient-to-br from-yellow-300/20 to-amber-300/20 rounded-full blur-3xl animate-pulse-glow"></div>
-          <div className="absolute bottom-1/3 left-0 w-96 h-96 bg-gradient-to-br from-orange-300/20 to-red-300/20 rounded-full blur-3xl animate-pulse-glow delay-1000"></div>
-        </div>
-        <div className="absolute top-20 left-10 text-8xl opacity-5 animate-float">🌶️</div>
-        <div className="absolute top-40 right-20 text-7xl opacity-5 animate-float-reverse">🧄</div>
-        <div className="absolute bottom-40 left-1/4 text-9xl opacity-5 animate-float">🌿</div>
-        <div className="absolute bottom-20 right-1/3 text-8xl opacity-5 animate-float-reverse">🍃</div>
-      </div>
-
-      {/* Hero */}
-      <div className="relative bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 overflow-hidden w-full">
-        <div className="absolute inset-0">
-          <div className="absolute top-0 left-1/4 w-96 h-96 bg-amber-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
-          <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-orange-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse delay-1000"></div>
-        </div>
-        <div className="absolute inset-0 shimmer-bg"></div>
-        <div className="relative px-6 lg:px-12 py-10 text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 shadow-2xl mb-4 transform hover:scale-110 transition-all duration-500 relative">
-            <ChefHat className="w-8 h-8 text-white" />
-            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 blur-xl opacity-50 animate-pulse"></div>
-          </div>
-          <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold font-serif text-white mb-3 tracking-tight">
-            Dapur <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-400 to-orange-400">Akulturasi</span>
-          </h1>
-          <p className="text-sm md:text-base lg:text-lg text-slate-300 max-w-2xl mx-auto leading-relaxed font-light mb-6">
-            Panduan langkah demi langkah untuk menciptakan keajaiban rasa kuliner khas Medan di dapur Anda
-          </p>
-          <div className="flex items-center justify-center gap-6 md:gap-10 flex-wrap">
-            <div className="text-center">
-              <div className="text-2xl md:text-3xl font-bold text-amber-400 font-serif">{dishes.length}</div>
-              <div className="text-xs text-slate-400 uppercase tracking-wider mt-0.5">Resep</div>
+    <>
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-amber-50">
+        {/* HERO SECTION */}
+        <div className="relative h-[400px] md:h-[500px] overflow-hidden bg-gradient-to-br from-amber-200 to-orange-300">
+          {food.image ? (
+            <img
+              src={food.image}
+              alt={food.name}
+              className="w-full h-full object-cover"
+              onError={(e) => { e.currentTarget.style.display = 'none' }}
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center">
+              <span className="text-8xl opacity-30">🍽️</span>
             </div>
-            <div className="w-px h-8 bg-slate-700"></div>
-            <div className="text-center">
-              <div className="text-2xl md:text-3xl font-bold text-amber-400 font-serif">{dishes.reduce((a, d) => a + (d.cooking_steps?.length || 0), 0)}</div>
-              <div className="text-xs text-slate-400 uppercase tracking-wider mt-0.5">Langkah</div>
-            </div>
-            <div className="w-px h-8 bg-slate-700"></div>
-            <div className="text-center">
-              <div className="text-2xl md:text-3xl font-bold text-amber-400 font-serif">100%</div>
-              <div className="text-xs text-slate-400 uppercase tracking-wider mt-0.5">Tradisional</div>
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+
+          <div className="absolute top-0 left-0 right-0 p-4 md:p-6 flex justify-between items-start">
+            <button onClick={() => navigate(-1)} className="w-11 h-11 bg-white/95 backdrop-blur-md rounded-full flex items-center justify-center shadow-lg hover:bg-white transition-all active:scale-95 group">
+              <ArrowLeft className="w-5 h-5 text-gray-700 group-hover:-translate-x-0.5 transition-transform" />
+            </button>
+            <div className="flex gap-3">
+              <button className="w-11 h-11 bg-white/95 backdrop-blur-md rounded-full flex items-center justify-center shadow-lg hover:bg-white transition-all active:scale-95">
+                <Share2 className="w-5 h-5 text-gray-700" />
+              </button>
+              <button onClick={handleFavoriteClick} className="w-11 h-11 bg-white/95 backdrop-blur-md rounded-full flex items-center justify-center shadow-lg hover:bg-white transition-all active:scale-95">
+                <Heart className={`w-5 h-5 transition-all ${isFavorite ? 'fill-red-500 text-red-500 scale-110' : 'text-gray-700'}`} />
+              </button>
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* Content */}
-      <div className="w-full px-4 md:px-6 lg:px-8 py-8 relative z-10">
-        {dishes.length === 0 ? (
-          <div className="text-center py-20 bg-white/60 backdrop-blur-lg rounded-3xl border-2 border-dashed border-amber-300">
-            <Utensils className="w-12 h-12 text-amber-600 mx-auto mb-4" />
-            <h3 className="text-2xl font-serif font-bold text-slate-800 mb-2">Belum Ada Resep</h3>
-            <p className="text-slate-600">Data kuliner sedang dalam proses penyusunan</p>
+          <div className="absolute bottom-0 left-0 right-0 p-6 md:p-10 text-white">
+            <div className="max-w-5xl mx-auto">
+              <span className="inline-flex items-center px-3 py-1.5 bg-orange-500/95 backdrop-blur-md rounded-full text-xs font-bold mb-4 shadow-lg">
+                <UtensilsCrossed className="w-3.5 h-3.5 mr-1.5" />
+                {food.category}
+              </span>
+              <h1 className="text-4xl md:text-5xl font-bold mb-3 leading-tight">{food.name}</h1>
+              <div className="flex items-center gap-4 text-sm">
+                {hasReviews && (
+                  <div className="flex items-center gap-2 bg-white/20 backdrop-blur-md px-3 py-1.5 rounded-lg">
+                    <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+                    <span className="font-bold">{avgRating}</span>
+                    <span className="text-white/70">({reviews.length} ulasan)</span>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
-        ) : (
-          <div className="space-y-4 md:space-y-6">
-            {dishes.map((dish) => {
-              const isOpen = selectedDish === dish.id
-              const steps = dish.cooking_steps || []
-              const isThisDishActive = speech.activeDishId === dish.id
+        </div>
 
-              return (
-                <div key={dish.id} className={`group relative bg-white/90 backdrop-blur-sm rounded-3xl shadow-xl overflow-hidden transition-all duration-700 ${isOpen ? 'shadow-2xl ring-2 ring-amber-400 ring-offset-4 scale-[1.01]' : 'hover:shadow-2xl hover:-translate-y-1'}`}>
-                  <div className="relative bg-white rounded-3xl">
+        {/* CONTENT */}
+        <div className="max-w-5xl mx-auto px-4 md:px-6 -mt-8 relative z-10 pb-40">
+          <div className="grid grid-cols-3 gap-3 md:gap-4 mb-6">
+            <div className="bg-white rounded-2xl p-4 shadow-sm border border-orange-100 text-center">
+              <div className="text-2xl mb-1">🍽️</div>
+              <p className="text-xs text-gray-500 font-medium">Kategori</p>
+              <p className="text-sm font-bold text-gray-800 truncate">{food.category}</p>
+            </div>
+            <div className="bg-white rounded-2xl p-4 shadow-sm border border-orange-100 text-center">
+              <div className="text-2xl mb-1">⭐</div>
+              <p className="text-xs text-gray-500 font-medium">Rating</p>
+              <p className="text-sm font-bold text-gray-800">{hasReviews ? avgRating : 'Belum ada'}</p>
+            </div>
+            <div className="bg-white rounded-2xl p-4 shadow-sm border border-orange-100 text-center">
+              <div className="text-2xl mb-1">💰</div>
+              <p className="text-xs text-gray-500 font-medium">Harga</p>
+              <p className="text-sm font-bold text-gray-800">Rp {(food.price / 1000).toFixed(0)}k</p>
+            </div>
+          </div>
 
-                    {/* Card Header */}
-                    <div className="p-5 md:p-6 cursor-pointer relative overflow-hidden" onClick={() => handleToggleDish(dish.id)}>
-                      <div className="absolute inset-0 bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                      <div className="relative flex items-center justify-between">
-                        <div className="flex items-center gap-4 md:gap-6 flex-1">
-                          <div className={`relative w-12 h-12 md:w-14 md:h-14 rounded-2xl flex items-center justify-center transition-all duration-500 shadow-lg ${isOpen ? 'bg-gradient-to-br from-amber-500 to-orange-600 scale-110 rotate-3' : 'bg-gradient-to-br from-amber-100 to-orange-100'}`}>
-                            <Utensils className={`w-5 h-5 md:w-6 md:h-6 transition-all duration-500 ${isOpen ? 'text-white -rotate-3' : 'text-amber-700'}`} />
-                          </div>
-                          <div className="flex-1">
-                            <h2 className="text-lg md:text-xl lg:text-2xl font-bold font-serif text-slate-800 mb-1.5 group-hover:text-amber-700 transition-colors duration-300">{dish.name}</h2>
-                            <div className="flex items-center gap-2 md:gap-3 text-xs md:text-sm text-slate-600 flex-wrap">
-                              <span className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-100 rounded-full">
-                                <Clock className="w-3 h-3 text-amber-600" /><span className="font-semibold">{steps.length} Langkah</span>
-                              </span>
-                              <span className="flex items-center gap-1.5 px-2.5 py-1 bg-orange-100 rounded-full">
-                                <BookOpen className="w-3 h-3 text-orange-600" /><span className="font-semibold">Tradisional</span>
-                              </span>
-                              <span className="flex items-center gap-1.5 px-2.5 py-1 bg-yellow-100 rounded-full">
-                                <Star className="w-3 h-3 text-yellow-600 fill-current" /><span className="font-semibold">Premium</span>
-                              </span>
-                              {isThisDishActive && (
-                                <span className="flex items-center gap-1.5 px-2.5 py-1 bg-green-100 rounded-full animate-pulse">
-                                  <Volume2 className="w-3 h-3 text-green-600" /><span className="font-semibold text-green-700">Sedang Diputar</span>
-                                </span>
-                              )}
-                            </div>
-                          </div>
+          {/* ACCORDION SECTIONS */}
+          <div className="space-y-3 mb-8">
+            <AccordionSection title="Deskripsi" icon="📝" isOpen={expandedSections.deskripsi} onToggle={() => toggleSection('deskripsi')} defaultOpen>
+              <p className="text-gray-600 leading-relaxed">{food.description}</p>
+            </AccordionSection>
+
+            {food.history && (
+              <AccordionSection title="Sejarah" icon="🏛️" isOpen={expandedSections.sejarah} onToggle={() => toggleSection('sejarah')}>
+                <p className="text-gray-600 leading-relaxed whitespace-pre-line text-sm">{food.history}</p>
+              </AccordionSection>
+            )}
+
+            {food.journey && (
+              <AccordionSection title="Perjalanan & Akulturasi" icon="🗺️" isOpen={expandedSections.journey} onToggle={() => toggleSection('journey')}>
+                <p className="text-gray-600 leading-relaxed whitespace-pre-line text-sm">{food.journey}</p>
+              </AccordionSection>
+            )}
+
+            <AccordionSection title="Bahan-bahan Utama" icon="🌿" isOpen={expandedSections.ingredients} onToggle={() => toggleSection('ingredients')}>
+              <div className="flex flex-wrap gap-2">
+                {food.ingredients.map((item, i) => (
+                  <span key={i} className="px-3 py-2 bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 text-orange-800 rounded-xl text-sm font-medium shadow-sm">
+                    {item}
+                  </span>
+                ))}
+              </div>
+            </AccordionSection>
+
+            {food.spices && food.spices.length > 0 && (
+              <AccordionSection title="Bumbu & Rempah Khas" icon="🫙" isOpen={expandedSections.spices} onToggle={() => toggleSection('spices')}>
+                <div className="flex flex-wrap gap-2">
+                  {food.spices.map((spice, i) => (
+                    <span key={i} className="px-3 py-2 bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200 text-amber-800 rounded-xl text-sm font-medium shadow-sm">
+                      {spice}
+                    </span>
+                  ))}
+                </div>
+              </AccordionSection>
+            )}
+
+            {food.nutrition && (
+              <AccordionSection title="Informasi Nutrisi" icon="💊" isOpen={expandedSections.nutrition} onToggle={() => toggleSection('nutrition')}>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <NutriBadge label="Kalori" value={food.nutrition.calories} color="from-red-500 to-red-600" />
+                  <NutriBadge label="Lemak" value={food.nutrition.fat} color="from-yellow-500 to-orange-500" />
+                  <NutriBadge label="Karbohidrat" value={food.nutrition.carbs} color="from-blue-500 to-blue-600" />
+                  <NutriBadge label="Protein" value={food.nutrition.protein} color="from-green-500 to-emerald-600" />
+                </div>
+              </AccordionSection>
+            )}
+
+            {food.recommendedPlaces && food.recommendedPlaces.length > 0 && (
+              <AccordionSection title="Rekomendasi Tempat" icon="📍" isOpen={expandedSections.places} onToggle={() => toggleSection('places')}>
+                <div className="space-y-3">
+                  {food.recommendedPlaces.map((place, i) => (
+                    <div key={i} className="border border-gray-200 rounded-2xl p-4 hover:border-orange-300 hover:shadow-md transition-all bg-white">
+                      <div className="flex justify-between items-start mb-3">
+                        <h4 className="font-bold text-gray-800 flex-1 pr-3">{place.name}</h4>
+                        <span className="flex items-center gap-1 text-orange-600 font-bold text-sm bg-orange-50 px-2.5 py-1 rounded-lg">
+                          <Star className="w-3.5 h-3.5 fill-orange-500" /> {place.rating}
+                        </span>
+                      </div>
+                      <div className="space-y-2 mb-3">
+                        <p className="text-xs text-gray-500 flex items-start gap-2">
+                          <MapPin className="w-4 h-4 flex-shrink-0 mt-0.5 text-orange-500" />
+                          <span>{place.address}</span>
+                        </p>
+                        <p className="text-xs text-gray-500 flex items-center gap-2">
+                          <Clock className="w-4 h-4 flex-shrink-0 text-orange-500" />
+                          {place.hours}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => setMapModal({ name: place.name, address: place.address, mapsUrl: place.mapsUrl })}
+                        className="flex items-center justify-center gap-2 w-full bg-gradient-to-r from-orange-500 to-amber-500 text-white py-2.5 rounded-xl font-semibold text-sm hover:shadow-lg transition-all active:scale-95"
+                      >
+                        <MapPin className="w-4 h-4" /> Lihat di Peta
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </AccordionSection>
+            )}
+          </div>
+
+          {/* REVIEWS SECTION */}
+          <div id="ulasan-section" className="bg-white rounded-3xl shadow-lg border border-orange-100 overflow-hidden mb-6">
+            <div className="bg-gradient-to-r from-orange-500 to-amber-500 p-6 md:p-8 text-white">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-2xl font-bold flex items-center gap-2 mb-2">
+                    <Star className="w-6 h-6 fill-yellow-300 text-yellow-300" />
+                    Ulasan Pengguna
+                  </h2>
+                  {hasReviews ? (
+                    <p className="text-white/90">
+                      Rating <span className="font-bold text-white">{avgRating}</span> dari {reviews.length} ulasan
+                    </p>
+                  ) : (
+                    <p className="text-white/90">Belum ada ulasan</p>
+                  )}
+                </div>
+                <button
+                  onClick={handleWriteReviewClick}
+                  className="flex-shrink-0 px-6 py-3 bg-white text-orange-600 rounded-xl font-bold shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
+                >
+                  <span>✏️</span> Tulis Ulasan
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 md:p-8 space-y-6">
+              {showReviewForm && isAuthenticated && (
+                <div className="border-2 border-orange-200 rounded-2xl p-5 bg-orange-50/50 space-y-4 animate-fade-in">
+                  <div>
+                    <p className="text-sm font-semibold text-gray-700 mb-3">Rating Anda:</p>
+                    <div className="flex items-center gap-2">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button key={star} type="button" onClick={() => setNewRating(star)} className="text-3xl transition-all hover:scale-110">
+                          {star <= newRating ? '⭐' : '☆'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <textarea
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    placeholder="Bagaimana pengalaman Anda? Ceritakan di sini..."
+                    rows={4}
+                    className="w-full rounded-xl border border-gray-200 p-4 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent resize-none"
+                  />
+                  <div className="flex gap-3 justify-end">
+                    <button onClick={() => setShowReviewForm(false)} className="px-5 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-xl transition-colors">
+                      Batal
+                    </button>
+                    <button
+                      onClick={handleSubmitReview}
+                      disabled={submitting || !newComment.trim()}
+                      className="px-6 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-orange-500 to-amber-500 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg transition-all"
+                    >
+                      {submitting ? 'Mengirim...' : 'Kirim Ulasan'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {reviewsLoading ? (
+                <div className="text-center py-12">
+                  <div className="w-12 h-12 border-4 border-orange-200 border-t-orange-500 rounded-full animate-spin mx-auto mb-4"></div>
+                  <p className="text-gray-500">Memuat ulasan...</p>
+                </div>
+              ) : reviews.length === 0 ? (
+                <div className="text-center py-12 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200">
+                  <div className="text-5xl mb-3">💬</div>
+                  <p className="text-gray-500 font-medium">Belum ada ulasan</p>
+                  <p className="text-gray-400 text-sm mt-1">Jadilah yang pertama memberikan penilaian!</p>
+                </div>
+              ) : (
+                <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
+                  {reviews.map((review, index) => (
+                    <div key={review.id || index} className="border-b border-gray-100 last:border-0 pb-5 last:pb-0">
+                      <div className="flex items-start gap-4">
+                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-400 to-amber-400 flex items-center justify-center text-lg font-bold text-white flex-shrink-0 shadow-md">
+                          {review.user_avatar ? (
+                            <img
+                              src={review.user_avatar}
+                              alt={review.user_name || 'User'}
+                              className="w-12 h-12 rounded-full object-cover"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none'
+                                e.currentTarget.parentElement!.textContent = (review.user_name || 'U').charAt(0).toUpperCase()
+                              }}
+                            />
+                          ) : (
+                            (review.user_name || 'U').charAt(0).toUpperCase()
+                          )}
                         </div>
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-500 flex-shrink-0 ml-4 ${isOpen ? 'bg-gradient-to-br from-amber-500 to-orange-600 rotate-180 shadow-xl scale-110' : 'bg-slate-100 group-hover:bg-amber-100'}`}>
-                          <ChevronDown className={`w-5 h-5 transition-colors duration-300 ${isOpen ? 'text-white' : 'text-slate-600'}`} />
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-2">
+                            <div>
+                              <p className="font-bold text-gray-800">{review.user_name || 'Anonymous'}</p>
+                              <div className="flex items-center gap-2 mt-1">
+                                <div className="flex text-yellow-400 text-sm">
+                                  {'★'.repeat(review.rating || 0)}{'☆'.repeat(5 - (review.rating || 0))}
+                                </div>
+                                {review.is_verified_purchase ? (
+                                  <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">Terverifikasi</span>
+                                ) : null}
+                              </div>
+                            </div>
+                            <span className="text-xs text-gray-400">
+                              {review.visited_date || (review.created_at ? new Date(review.created_at).toLocaleDateString('id-ID') : 'Baru saja')}
+                            </span>
+                          </div>
+                          <p className="text-gray-600 leading-relaxed text-sm">{review.comment}</p>
+
+                          {review.reply_from_owner && (
+                            <div className="mt-3 bg-gradient-to-r from-orange-50 to-amber-50 rounded-xl p-4 text-sm border-l-4 border-orange-400">
+                              <p className="font-bold text-orange-800 mb-1 text-xs uppercase tracking-wide">Balasan Pemilik</p>
+                              <p className="text-gray-700">{review.reply_from_owner}</p>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
-
-                    {/* Expanded Content */}
-                    {isOpen && steps.length > 0 && (
-                      <div className="px-5 md:px-6 pb-6 border-t border-slate-100">
-                        <div className="mt-6">
-                          {/* Header Langkah + Audio Controls */}
-                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-                            <div className="flex items-center gap-3">
-                              <div className="relative w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-xl">
-                                <Flame className="w-5 h-5 text-white" />
-                              </div>
-                              <div>
-                                <h3 className="text-lg md:text-xl font-bold font-serif text-slate-800">Langkah-langkah Memasak</h3>
-                                <p className="text-xs text-slate-500 mt-0.5">Ikuti setiap langkah dengan teliti</p>
-                              </div>
-                            </div>
-
-                            {/* ── Audio Control Bar ── */}
-                            <div className="flex items-center gap-2 bg-slate-900 rounded-2xl px-4 py-2.5 shadow-xl self-start sm:self-auto">
-                              <Volume2 className="w-4 h-4 text-amber-400 flex-shrink-0" />
-                              <span className="text-xs text-slate-300 font-medium hidden sm:inline">Audio:</span>
-
-                              {/* Play All / Pause */}
-                              {!speech.speaking || speech.activeDishId !== dish.id ? (
-                                <button
-                                  onClick={() => speech.playAll(steps, dish.id)}
-                                  className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-white rounded-xl text-xs font-bold transition-all hover:scale-105 active:scale-95"
-                                  title="Putar semua langkah"
-                                >
-                                  <Play className="w-3.5 h-3.5 fill-current" /> Putar Semua
-                                </button>
-                              ) : (
-                                <>
-                                  <button
-                                    onClick={speech.togglePause}
-                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all hover:scale-105 active:scale-95 ${speech.paused ? 'bg-green-500 hover:bg-green-400 text-white' : 'bg-yellow-500 hover:bg-yellow-400 text-white'}`}
-                                    title={speech.paused ? 'Lanjutkan' : 'Jeda'}
-                                  >
-                                    {speech.paused ? <><Play className="w-3.5 h-3.5 fill-current" /> Lanjutkan</> : <><Pause className="w-3.5 h-3.5" /> Jeda</>}
-                                  </button>
-                                  <button
-                                    onClick={speech.stopAll}
-                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500 hover:bg-red-400 text-white rounded-xl text-xs font-bold transition-all hover:scale-105 active:scale-95"
-                                    title="Hentikan audio"
-                                  >
-                                    <Square className="w-3 h-3 fill-current" /> Stop
-                                  </button>
-                                </>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Steps Timeline */}
-                          <div className="relative">
-                            <div className="absolute left-7 md:left-8 top-0 bottom-0 w-1 bg-gradient-to-b from-amber-400 via-orange-400 to-amber-200 rounded-full"></div>
-                            <div className="space-y-5">
-                              {steps.map((step, idx) => {
-                                const isCurrentStep = speech.activeDishId === dish.id && speech.currentStep === idx
-                                const isSpeakingThisStep = isCurrentStep && speech.speaking && !speech.paused
-                                return (
-                                  <div key={idx} className={`relative flex gap-4 md:gap-5 group/step transition-all duration-300 ${isCurrentStep ? 'scale-[1.02]' : ''}`}>
-                                    <div className="flex-shrink-0 relative z-10">
-                                      <div className={`w-14 h-14 md:w-16 md:h-16 rounded-2xl text-white border-4 border-white shadow-2xl flex items-center justify-center text-base md:text-lg font-bold font-serif transition-all duration-500 relative ${isSpeakingThisStep ? 'bg-gradient-to-br from-amber-500 to-orange-600 scale-110 animate-speaking' : isCurrentStep ? 'bg-gradient-to-br from-amber-400 to-orange-500 scale-105' : 'bg-gradient-to-br from-slate-800 via-slate-900 to-slate-800 group-hover/step:from-amber-500 group-hover/step:to-orange-600 group-hover/step:rotate-6 group-hover/step:scale-110'}`}>
-                                        {isSpeakingThisStep ? <Volume2 className="w-5 h-5 animate-pulse" /> : idx + 1}
-                                      </div>
-                                    </div>
-
-                                    <div className={`flex-1 pt-2 pb-3 px-4 rounded-2xl border-2 transition-all duration-300 relative overflow-hidden ${isCurrentStep ? 'border-amber-400 shadow-xl bg-gradient-to-br from-amber-50 to-orange-50' : 'border-slate-200 bg-gradient-to-br from-slate-50 via-white to-amber-50/30 group-hover/step:border-amber-300 group-hover/step:shadow-lg'}`}>
-                                      {/* Indicator berjalan */}
-                                      {isSpeakingThisStep && (
-                                        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-400 to-orange-500 rounded-t-2xl">
-                                          <div className="h-full bg-white/50 rounded-full animate-pulse" style={{ width: '60%' }}></div>
-                                        </div>
-                                      )}
-
-                                      <div className="flex items-start justify-between gap-3">
-                                        <p className={`leading-relaxed text-sm md:text-base flex-1 transition-colors duration-300 ${isCurrentStep ? 'text-amber-900 font-medium' : 'text-slate-700'}`}>
-                                          {step.trim()}
-                                        </p>
-                                        {/* Tombol play per langkah */}
-                                        <button
-                                          onClick={() => {
-                                            if (isSpeakingThisStep) { speech.stopAll() }
-                                            else { speech.playSingleStep(step, idx, dish.id) }
-                                          }}
-                                          className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-all hover:scale-110 active:scale-95 shadow-md ${isSpeakingThisStep ? 'bg-red-100 text-red-500 hover:bg-red-200' : 'bg-amber-100 text-amber-600 hover:bg-amber-200'}`}
-                                          title={isSpeakingThisStep ? 'Hentikan' : `Dengarkan langkah ${idx + 1}`}
-                                        >
-                                          {isSpeakingThisStep ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-                                        </button>
-                                      </div>
-                                    </div>
-                                  </div>
-                                )
-                              })}
-                            </div>
-                          </div>
-
-                          {/* Footer */}
-                          <div className="mt-8 pt-6 border-t-2 border-slate-100 flex items-center justify-between flex-col md:flex-row gap-3">
-                            <div className="flex items-center gap-3 text-sm text-slate-600 italic">
-                              <div className="w-3 h-3 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 animate-pulse"></div>
-                              Pastikan semua bahan sudah siap sebelum memulai (Mise en place)
-                            </div>
-                            <button
-                              onClick={() => { speech.stopAll(); setSelectedDish(null) }}
-                              className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-slate-800 via-slate-900 to-slate-800 text-white font-bold text-sm hover:from-amber-600 hover:via-orange-600 hover:to-amber-600 transition-all duration-500 shadow-xl hover:shadow-2xl hover:scale-105 flex items-center gap-2"
-                            >
-                              <span>Tutup Resep</span>
-                              <ChevronUp className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                  ))}
                 </div>
-              )
-            })}
+              )}
+            </div>
           </div>
-        )}
+        </div>
       </div>
 
-      {/* Footer */}
-      <div className="relative z-10 py-8 text-center">
-        <div className="flex items-center justify-center gap-4 mb-3">
-          <div className="h-px w-16 bg-gradient-to-r from-transparent to-amber-400"></div>
-          <div className="text-amber-600 text-2xl">🍽️</div>
-          <div className="h-px w-16 bg-gradient-to-l from-transparent to-amber-400"></div>
+      <LoginModal isOpen={showLogin} onClose={() => setShowLogin(false)} onSuccess={handleLoginSuccess} />
+      {mapModal && <MapModal place={mapModal} onClose={() => setMapModal(null)} />}
+
+      <style>{`
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: linear-gradient(to bottom, #f97316, #f59e0b); border-radius: 10px; }
+        @keyframes fade-in { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fade-in 0.3s ease-out forwards; }
+      `}</style>
+    </>
+  )
+}
+
+function AccordionSection({ title, icon, isOpen, onToggle, children, defaultOpen = false }: {
+  title: string
+  icon: string
+  isOpen: boolean
+  onToggle: () => void
+  children: React.ReactNode
+  defaultOpen?: boolean
+}) {
+  return (
+    <div className={`bg-white rounded-2xl shadow-sm border transition-all duration-300 overflow-hidden ${isOpen ? 'border-orange-300 shadow-md' : 'border-gray-200 hover:border-orange-200'}`}>
+      <button onClick={onToggle} className="w-full px-5 py-4 flex items-center justify-between bg-white hover:bg-gray-50 transition-colors text-left">
+        <div className="flex items-center gap-3">
+          <span className="text-2xl">{icon}</span>
+          <h2 className="text-base md:text-lg font-bold text-gray-800">{title}</h2>
         </div>
-        <p className="text-slate-600 text-sm">Dibuat dengan ❤️ untuk melestarikan warisan kuliner Medan</p>
-      </div>
+        <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${isOpen ? 'bg-orange-100 rotate-180' : 'bg-gray-100'}`}>
+          <ChevronDown className="w-5 h-5 text-orange-600" />
+        </div>
+      </button>
+
+      {isOpen && (
+        <div className="px-5 pb-5 pt-1 border-t border-gray-100 animate-fade-in bg-gradient-to-b from-white to-gray-50/50">
+          {children}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function NutriBadge({ label, value, color }: { label: string; value: string; color: string }) {
+  return (
+    <div className={`bg-gradient-to-br ${color} rounded-2xl p-4 text-center text-white shadow-lg transform hover:scale-105 transition-transform`}>
+      <p className="text-[11px] font-bold uppercase tracking-wider opacity-90 mb-1.5">{label}</p>
+      <p className="font-bold text-lg">{value}</p>
     </div>
   )
 }

@@ -1,20 +1,9 @@
 import { useState, useRef, useEffect } from 'react'
 import {
-  Send,
-  Bot,
-  User,
-  Sparkles,
-  ChefHat,
-  MessageCircle,
-  Clock,
-  CheckCheck,
-  Coffee,
-  Utensils,
-  MapPin,
-  AlertCircle,
-  RefreshCw
+  Send, Bot, User, Sparkles, ChefHat, MessageCircle,
+  Clock, CheckCheck, Coffee, Utensils, MapPin, AlertCircle, RefreshCw
 } from 'lucide-react'
-import { sendToAI, type Message as AIMessage } from '../services/aiService' // <-- IMPORT INI
+import API_BASE_URL from '../config/api'
 
 interface ChatMessage {
   id: string
@@ -34,6 +23,8 @@ export default function ChatPage() {
       isBot: true
     }
   ])
+
+  
   const [inputText, setInputText] = useState('')
   const [isTyping, setIsTyping] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -71,7 +62,7 @@ export default function ChatPage() {
       }))
 
       // PANGGIL BACKEND SENDIRI (Bukan Groq langsung)
-      const response = await fetch(`${import.meta.env.VITE_API_URL ?? 'http://localhost:5000/api'}/chat`, {
+      const response = await fetch(`${API_BASE_URL}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messages: chatHistory })

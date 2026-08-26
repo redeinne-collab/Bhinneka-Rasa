@@ -3,9 +3,9 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { adminFetch } from '../../services/adminApi'
 import { 
-  LayoutDashboard, UtensilsCrossed, Brain, BookOpen, 
+  UtensilsCrossed, Brain, BookOpen, 
   Trophy, Users, MessageCircle, TrendingUp, ArrowRight,
-  ChefHat, AlertCircle, Package, Star, FileText
+  AlertCircle, Package, FileText, MapPin
 } from 'lucide-react'
 
 import API_BASE_URL from '../../config/api'
@@ -100,7 +100,7 @@ export default function AdminDashboard() {
     {
       title: 'Restaurants',
       value: stats?.totalRestaurants || 0,
-      icon: Package,
+      icon: MapPin,
       color: 'from-red-400 to-rose-500',
       bgColor: 'bg-red-50',
       textColor: 'text-red-600'
@@ -120,6 +120,17 @@ export default function AdminDashboard() {
       countLabel: 'Menu Items'
     },
     {
+      title: 'Kelola Lokasi',
+      description: 'Tambah, edit, dan hapus lokasi restoran',
+      icon: MapPin,
+      color: 'from-red-500 to-rose-600',
+      bgColor: 'bg-gradient-to-br from-red-50 to-rose-50',
+      borderColor: 'border-red-200',
+      path: '/admin/restaurants',
+      count: stats?.totalRestaurants || 0,
+      countLabel: 'Lokasi'
+    },
+    {
       title: 'Personality Quiz',
       description: 'Kelola pertanyaan kuis kepribadian',
       icon: Brain,
@@ -127,7 +138,7 @@ export default function AdminDashboard() {
       bgColor: 'bg-gradient-to-br from-purple-50 to-pink-50',
       borderColor: 'border-purple-200',
       path: '/admin/personality-quiz',
-      count: 7, // Fixed: jumlah soal personality quiz
+      count: 7,
       countLabel: 'Pertanyaan'
     },
     {
@@ -138,7 +149,7 @@ export default function AdminDashboard() {
       bgColor: 'bg-gradient-to-br from-blue-50 to-indigo-50',
       borderColor: 'border-blue-200',
       path: '/admin/main-quiz',
-      count: 50, // Fixed: jumlah soal main quiz
+      count: 50,
       countLabel: 'Pertanyaan'
     }
   ]
@@ -174,7 +185,7 @@ export default function AdminDashboard() {
         <h2 className="text-xl font-bold text-gray-800 mb-2">Manajemen Konten</h2>
         <p className="text-gray-600 mb-6">Pilih menu untuk mengelola konten aplikasi</p>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {managementItems.map((item, idx) => (
             <button
               key={idx}
@@ -198,7 +209,11 @@ export default function AdminDashboard() {
                 <h3 className="text-lg font-bold text-gray-800 mb-2">{item.title}</h3>
                 <p className="text-sm text-gray-600 mb-4">{item.description}</p>
                 
-                <div className="flex items-center gap-2 text-sm font-semibold group-hover:gap-3 transition-all" style={{ color: item.color.includes('orange') ? '#ea580c' : item.color.includes('purple') ? '#9333ea' : '#2563eb' }}>
+                <div className="flex items-center gap-2 text-sm font-semibold group-hover:gap-3 transition-all" style={{ 
+                  color: item.color.includes('orange') ? '#ea580c' : 
+                         item.color.includes('red') ? '#e11d48' : 
+                         item.color.includes('purple') ? '#9333ea' : '#2563eb' 
+                }}>
                   <span>Kelola Sekarang</span>
                   <ArrowRight className="w-4 h-4" />
                 </div>

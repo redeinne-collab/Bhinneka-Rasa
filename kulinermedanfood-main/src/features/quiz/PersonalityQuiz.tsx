@@ -184,10 +184,14 @@ export default function PersonalityQuiz() {
     }, 300)
   }
 
-  const calculateResult = (finalAnswers: string[]) => {
-    const foodScores = { KB: 0, SM: 0, BM: 0, BA: 0, CF: 0 }
+    const calculateResult = (finalAnswers: string[]) => {
+    // PERBAIKAN 1: Tambahkan type Record<string, number>
+    const foodScores: Record<string, number> = { KB: 0, SM: 0, BM: 0, BA: 0, CF: 0 }
+    
     finalAnswers.forEach(target => {
-      if (foodScores[target] !== undefined) foodScores[target] += 10
+      if (foodScores[target] !== undefined) {
+        foodScores[target] += 10
+      }
     })
 
     const maxScore = Math.max(...Object.values(foodScores))
@@ -207,14 +211,15 @@ export default function PersonalityQuiz() {
     if (user) saveToDatabase(foodResult, foodScores)
   }
 
-  const saveToDatabase = async (foodResult: string, foodScores: any) => {
+  const saveToDatabase = async (foodResult: string, foodScores: Record<string, number>) => {
     try {
       setIsSubmitting(true)
       await fetch(`${API_BASE_URL}/quiz-results`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          user_id: user.id,
+          // PERBAIKAN 2: Gunakan optional chaining user?.id
+          user_id: user?.id || null,
           quiz_type: 'personality',
           food_result: foodResult,
           total_score: 0,
@@ -268,7 +273,8 @@ export default function PersonalityQuiz() {
                   <Award className="w-5 h-5 text-amber-600" /> Detail Skor Kamu:
                 </h3>
                 <div className="space-y-3">
-                  {Object.entries(result.scores).map(([key, value]: [string, number]) => (
+                  {/* PERBAIKAN 3: Cast result.scores ke Record<string, number> */}
+                  {Object.entries(result.scores as Record<string, number>).map(([key, value]) => (
                     <div key={key} className="flex items-center gap-3">
                       <span className="text-sm font-semibold text-gray-600 w-32">{FOOD_NAMES[key]}</span>
                       <div className="flex-1 bg-gray-200 rounded-full h-3">

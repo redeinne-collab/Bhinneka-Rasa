@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react'
 import HeroSection from '../components/HeroSection'
 import FoodCard from '../components/FoodCard'
-import SectionHeader from '../components/SectionHeader'
-import LoginModal from '../components/LoginModal' // <-- Import Modal
+import LoginModal from '../components/LoginModal'
 import type { Food } from '../types/food'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'

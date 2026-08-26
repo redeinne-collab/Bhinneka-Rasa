@@ -30,5 +30,6 @@ export interface Food {
   journey?: string
   spices?: string[]
   nutrition?: NutritionInfo
+  cooking_steps?: string
   recommendedPlaces?: RecommendedPlace[]
 }

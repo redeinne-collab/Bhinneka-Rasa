@@ -100,11 +100,6 @@ export default function ManageMainQuiz() {
     setFormData({ ...formData, options: newOptions })
   }
 
-  const getSectionName = (qId: number) => {
-    const section = SECTIONS.find(s => qId >= s.range[0] && qId <= s.range[1])
-    return section?.name || 'Lainnya'
-  }
-
   if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full"></div></div>
 
   return (

@@ -64,8 +64,6 @@ const STYLES = `
   @keyframes ripple { 0%{transform:scale(0);opacity:1} 100%{transform:scale(3);opacity:0} }
   @keyframes starPop { 0%{transform:scale(0) rotate(-30deg);opacity:0} 60%{transform:scale(1.3) rotate(10deg);opacity:1} 100%{transform:scale(1) rotate(0);opacity:1} }
   @keyframes countUp { 0%{transform:translateY(20px);opacity:0} 100%{transform:translateY(0);opacity:1} }
-  /* table-3d uses inline transform; float is a separate var */
-  @keyframes tableFloatY { 0%,100%{--float-y:0px} 50%{--float-y:-3px} }
 
   .chef-idle    { animation: chefBob 2.4s ease-in-out infinite; }
   .chef-happy   { animation: chefHappy 0.9s ease-in-out; }
@@ -79,7 +77,6 @@ const STYLES = `
   .star-pop     { animation: starPop 0.5s cubic-bezier(.34,1.56,.64,1) forwards; }
   .count-up     { animation: countUp 0.4s ease-out forwards; }
 
-  /* speech bubble tail */
   .bubble-down::after {
     content: '';
     position: absolute;
@@ -121,9 +118,7 @@ const STYLES = `
     z-index: 9999;
     animation: particleFly 0.8s cubic-bezier(.25,.46,.45,.94) forwards;
   }
-  .steam {
-    animation: steamRise 1.8s ease-out infinite;
-  }
+  .steam { animation: steamRise 1.8s ease-out infinite; }
   .steam-2 { animation: steamRise 1.8s ease-out 0.6s infinite; }
   .steam-3 { animation: steamRise 1.8s ease-out 1.2s infinite; }
   .ripple-circle { animation: ripple 0.6s ease-out forwards; }
@@ -132,7 +127,6 @@ const STYLES = `
 // ─── Animated SVG Chef Character ─────────────────────────────────────────────
 function ChefCharacter({ mood }: { mood: ChefMood }) {
   const moodClass = mood === 'happy' ? 'chef-happy' : mood === 'sad' ? 'chef-sad' : mood === 'cooking' ? 'chef-cook' : mood === 'celebrate' ? 'chef-celebrate' : 'chef-idle'
-  // Eyes & mouth change per mood
   const eyeLeft = mood === 'happy' || mood === 'celebrate' ? 'M18,24 Q20,21 22,24' : mood === 'sad' ? 'M18,26 Q20,24 22,26' : 'M19,24 A1.5,1.5 0 1,1 22,24'
   const eyeRight = mood === 'happy' || mood === 'celebrate' ? 'M30,24 Q32,21 34,24' : mood === 'sad' ? 'M30,26 Q32,24 34,26' : 'M31,24 A1.5,1.5 0 1,1 34,24'
   const mouth = mood === 'happy' || mood === 'celebrate' ? 'M22,32 Q26,38 30,32' : mood === 'sad' ? 'M22,36 Q26,31 30,36' : 'M23,34 Q26,37 29,34'
@@ -146,57 +140,32 @@ function ChefCharacter({ mood }: { mood: ChefMood }) {
   return (
     <div className={`${moodClass} select-none`} style={{ filter: 'drop-shadow(0 8px 24px rgba(0,0,0,0.5))' }}>
       <svg width="120" height="160" viewBox="0 0 52 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-        {/* Chef hat */}
         <ellipse cx="26" cy="14" rx="14" ry="4" fill="#fff" />
         <rect x="14" y="4" width="24" height="12" rx="4" fill="#fff" />
         <ellipse cx="26" cy="4" rx="8" ry="4" fill="#f0f0f0" />
         <ellipse cx="26" cy="14" rx="14" ry="4" fill="#e8e8e8" />
-
-        {/* Head */}
         <ellipse cx="26" cy="30" rx="14" ry="14" fill="#FDDCB5" />
-
-        {/* Cheeks */}
         {cheeks}
-
-        {/* Eyes */}
         <path d={eyeLeft} stroke="#4a3728" strokeWidth="2.2" strokeLinecap="round" fill="none" />
         <path d={eyeRight} stroke="#4a3728" strokeWidth="2.2" strokeLinecap="round" fill="none" />
-
-        {/* Pupils */}
         {mood !== 'happy' && mood !== 'celebrate' && mood !== 'sad' && (
           <>
             <circle cx="20.5" cy="24.5" r="1" fill="#4a3728" />
             <circle cx="32.5" cy="24.5" r="1" fill="#4a3728" />
           </>
         )}
-
-        {/* Mouth */}
         <path d={mouth} stroke="#c0785a" strokeWidth="2" strokeLinecap="round" fill="none" />
-
-        {/* Body */}
         <rect x="12" y="44" width="28" height="22" rx="8" fill="#fff" />
-        {/* Apron */}
         <rect x="18" y="44" width="16" height="22" rx="4" fill="#f97316" opacity="0.85" />
-        {/* Apron buttons */}
         <circle cx="26" cy="50" r="1.5" fill="#fff" opacity="0.8" />
         <circle cx="26" cy="56" r="1.5" fill="#fff" opacity="0.8" />
-
-        {/* Left arm — holding pan */}
         <path d="M12,50 Q2,48 4,58" stroke="#FDDCB5" strokeWidth="6" strokeLinecap="round" />
-        {/* Right arm — raised */}
         <path d={mood === 'cooking' || mood === 'happy' ? "M40,50 Q50,40 48,52" : "M40,50 Q50,48 48,58"} stroke="#FDDCB5" strokeWidth="6" strokeLinecap="round" />
-
-        {/* Legs */}
         <rect x="16" y="63" width="8" height="14" rx="4" fill="#3b4a6b" />
         <rect x="28" y="63" width="8" height="14" rx="4" fill="#3b4a6b" />
-        {/* Shoes */}
         <ellipse cx="20" cy="77" rx="6" ry="3" fill="#1e2533" />
         <ellipse cx="32" cy="77" rx="6" ry="3" fill="#1e2533" />
-
-        {/* Sweat drop when sad */}
         {mood === 'sad' && <ellipse cx="38" cy="22" rx="2" ry="3" fill="#93c5fd" opacity="0.8" />}
-
-        {/* Stars when celebrate */}
         {mood === 'celebrate' && (
           <>
             <text x="2" y="18" fontSize="8">⭐</text>
@@ -212,7 +181,6 @@ function ChefCharacter({ mood }: { mood: ChefMood }) {
 function CookingWok({ shaking, ingredients }: { shaking: boolean; ingredients: string[] }) {
   return (
     <div className={`relative ${shaking ? 'pan-cook' : ''}`} style={{ filter: 'drop-shadow(0 12px 24px rgba(0,0,0,0.6))' }}>
-      {/* Steam */}
       {ingredients.length > 0 && (
         <div className="absolute -top-8 left-1/2 -translate-x-1/2 flex gap-3 pointer-events-none">
           <div className="steam w-2 h-6 bg-white/40 rounded-full blur-sm" />
@@ -222,36 +190,25 @@ function CookingWok({ shaking, ingredients }: { shaking: boolean; ingredients: s
       )}
 
       <svg width="110" height="70" viewBox="0 0 110 70" fill="none">
-        {/* Pan handle */}
         <rect x="80" y="28" width="28" height="8" rx="4" fill="#5a3e2b" />
         <rect x="82" y="30" width="24" height="4" rx="2" fill="#7a5a3b" />
-
-        {/* Wok body */}
         <ellipse cx="50" cy="32" rx="44" ry="14" fill="#2a2a2a" />
         <ellipse cx="50" cy="30" rx="44" ry="14" fill="#3a3a3a" />
-        {/* Rim highlight */}
         <ellipse cx="50" cy="28" rx="44" ry="14" fill="none" stroke="#555" strokeWidth="2" />
         <ellipse cx="50" cy="28" rx="42" ry="12" fill="none" stroke="#666" strokeWidth="1" />
-
-        {/* Inner wok */}
         <ellipse cx="50" cy="36" rx="36" ry="10" fill="#1a1a1a" />
-        {/* Liquid/food in wok */}
         {ingredients.length > 0 && (
           <>
             <ellipse cx="50" cy="38" rx="30" ry="7" fill="#b45309" opacity="0.9" />
             <ellipse cx="50" cy="37" rx="28" ry="6" fill="#d97706" opacity="0.6" />
-            {/* Bubbles */}
             <circle cx="40" cy="37" r="2" fill="#fbbf24" opacity="0.7" />
             <circle cx="55" cy="36" r="1.5" fill="#fbbf24" opacity="0.6" />
             <circle cx="62" cy="38" r="2.5" fill="#fbbf24" opacity="0.5" />
           </>
         )}
-
-        {/* Shine */}
         <ellipse cx="35" cy="22" rx="10" ry="4" fill="white" opacity="0.08" transform="rotate(-15 35 22)" />
       </svg>
 
-      {/* Ingredient emojis floating in wok */}
       <div className="absolute inset-0 flex items-center justify-center gap-1 pt-3">
         {ingredients.slice(-3).map((ing, i) => (
           <span key={i} className="text-sm" style={{ transform: `rotate(${(i - 1) * 15}deg)` }}>
@@ -295,20 +252,58 @@ function getIngredientEmoji(name: string): string {
   return '🥄'
 }
 
+// ─── Kata yang BUKAN bahan (kata kerja masak, satuan, kata umum) ─────────────
+const COOKING_STOPWORDS = new Set([
+  // kata kerja / proses masak
+  'rebus', 'rebusan', 'merebus', 'didihkan', 'didih', 'masak', 'matang',
+  'angkat', 'simpan', 'suwir', 'haluskan', 'tumis', 'menumis', 'iris',
+  'cincang', 'parut', 'sangrai', 'goreng', 'menggoreng', 'kukus',
+  'panggang', 'aduk', 'campur', 'campurkan', 'tambahkan', 'tuang',
+  'tuangkan', 'tiriskan', 'dinginkan', 'marinasi', 'lumuri', 'balurkan',
+  'taburi', 'taburkan', 'siram', 'kocok', 'ulen',
+  // satuan / ukuran
+  'liter', 'ml', 'cc', 'sdm', 'sdt', 'gram', 'kg', 'siung', 'butir',
+  'batang', 'lembar', 'ruas', 'buah', 'ekor', 'ikat', 'mangkuk',
+  'cangkir', 'sendok', 'cup', 'kaleng', 'bungkus', 'sachet', 'potong',
+  // kata umum
+  'secukupnya', 'hingga', 'sampai', 'dengan', 'dalam', 'untuk', 'dari',
+  'yang', 'dan', 'atau', 'lalu', 'kemudian', 'setelah', 'sebelum',
+])
+
 function extractStepIngredients(stepText: string, allIngredients: string[]): string[] {
   const lower = stepText.toLowerCase()
   const found: string[] = []
+
   for (const ing of allIngredients) {
-    const keyword = ing.toLowerCase().replace(/\d+[a-z]*\s*/g, '').replace(/\(.*?\)/g, '').trim()
-    if (keyword.length < 3) continue
-    const words = keyword.split(/[\s,/]+/).filter(w => w.length >= 3)
-    if (words.some(w => lower.includes(w))) found.push(ing)
+    const words = ing
+      .toLowerCase()
+      .replace(/\(.*?\)/g, ' ')          // buang isi kurung
+      .replace(/\d+([.,]\d+)?/g, ' ')    // buang angka
+      .replace(/[(),./-]/g, ' ')         // buang tanda baca
+      .split(/\s+/)
+      .filter(w => w.length >= 3 && !COOKING_STOPWORDS.has(w))
+
+    if (words.length === 0) continue
+
+    // cocokkan per KATA utuh (biar "air" tidak cocok dengan "cair", dll)
+    const hasWord = (w: string) =>
+      new RegExp(`\\b${w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`).test(lower)
+
+    // FIX: 1 kata → harus ketemu; >1 kata → SEMUA kata harus ketemu
+    const matched = words.length === 1 ? hasWord(words[0]) : words.every(hasWord)
+    if (matched) found.push(ing)
   }
-  return found.slice(0, 3)
+
+  return found.slice(0, 8)
 }
 
+// FIX #5: Math.max agar slice tidak pernah negatif
 function buildSlots(correctIngs: string[], allIngredients: string[], count = 8): IngredientSlot[] {
-  const decoys = [...allIngredients].filter(i => !correctIngs.includes(i)).sort(() => Math.random() - 0.5).slice(0, count - correctIngs.length)
+  const decoyCount = Math.max(0, count - correctIngs.length)
+  const decoys = [...allIngredients]
+    .filter(i => !correctIngs.includes(i))
+    .sort(() => Math.random() - 0.5)
+    .slice(0, decoyCount)
   return [
     ...correctIngs.map(name => ({ name, isCorrect: true, emoji: getIngredientEmoji(name), id: Math.random().toString(36).slice(2) })),
     ...decoys.map(name => ({ name, isCorrect: false, emoji: getIngredientEmoji(name), id: Math.random().toString(36).slice(2) })),
@@ -353,13 +348,19 @@ export default function BhinnekaRasaGame() {
   const [particles, setParticles] = useState<FloatingParticle[]>([])
   const [wrongCardId, setWrongCardId] = useState<string | null>(null)
   const [wrongMsg, setWrongMsg] = useState<string | null>(null)
+  const [wrongPickedIds, setWrongPickedIds] = useState<string[]>([]) // FIX #1
   const [rippleKey, setRippleKey] = useState(0)
   const wokRef = useRef<HTMLDivElement>(null)
 
+  // FIX #8: response parsing aman
   useEffect(() => {
     fetch(`${API_BASE}/dishes`)
       .then(r => r.json())
-      .then(data => { setDishes(data.data || []); setLoading(false) })
+      .then(data => {
+        const list = Array.isArray(data) ? data : (data?.data || [])
+        setDishes(Array.isArray(list) ? list : [])
+        setLoading(false)
+      })
       .catch(() => setLoading(false))
   }, [])
 
@@ -379,8 +380,9 @@ export default function BhinnekaRasaGame() {
     setParticles([])
     setWrongCardId(null)
     setWrongMsg(null)
+    setWrongPickedIds([])
+    setSlots(steps.length > 0 ? buildSlots(steps[0].correctIngs, dish.ingredients) : [])
     setPhase('cooking')
-    if (steps.length > 0) setSlots(buildSlots(steps[0].correctIngs, dish.ingredients))
   }, [])
 
   function spawnParticle(emoji: string, fromEl: HTMLButtonElement | null) {
@@ -399,18 +401,25 @@ export default function BhinnekaRasaGame() {
     setTimeout(() => setParticles(prev => prev.filter(pt => pt.id !== p.id)), 850)
   }
 
+  // FIX #1, #2, #3, #4: logic pick bahan diperbaiki
   function handlePickIngredient(slot: IngredientSlot, evt: React.MouseEvent<HTMLButtonElement>) {
-    if (stepDone || pickedIngredients.includes(slot.name)) return
+    if (stepDone || lives <= 0) return
+    if (pickedIngredients.includes(slot.name)) return
+    if (wrongPickedIds.includes(slot.id)) return
+
     const currentStep = cookingSteps[currentStepIdx]
-    const hasCorrectIngs = currentStep.correctIngs.length > 0
-    if (!hasCorrectIngs) return
+    if (!currentStep || currentStep.correctIngs.length === 0) return
 
     if (slot.isCorrect) {
       spawnParticle(slot.emoji, evt.currentTarget)
       const newPicked = [...pickedIngredients, slot.name]
       setPickedIngredients(newPicked)
       setWokIngredients(prev => [...prev, slot.emoji])
-      setScore(s => { const ns = s + 50; setScoreAnim(true); setTimeout(() => setScoreAnim(false), 400); return ns })
+
+      setScore(s => s + 50)
+      setScoreAnim(true)
+      setTimeout(() => setScoreAnim(false), 450)
+
       setWokShaking(true)
       setRippleKey(k => k + 1)
       setTimeout(() => setWokShaking(false), 550)
@@ -418,6 +427,7 @@ export default function BhinnekaRasaGame() {
       const allCorrectPicked = currentStep.correctIngs.every(ci => newPicked.includes(ci))
       if (allCorrectPicked) {
         setStepDone(true)
+        setWrongMsg(null)
         setChefMood('happy')
         setResults(r => [...r, { step: currentStepIdx + 1, stepText: currentStep.stepText, pickedIngredient: newPicked.join(', '), correct: true }])
         setTimeout(() => setChefMood('idle'), 1000)
@@ -426,16 +436,23 @@ export default function BhinnekaRasaGame() {
         setTimeout(() => setChefMood('idle'), 700)
       }
     } else {
+      // Kartu salah → langsung ditandai & disabled
+      setWrongPickedIds(ids => [...ids, slot.id])
       setWrongCardId(slot.id)
-      setWrongMsg(slot.name)
       setChefMood('sad')
-      setLives(l => {
-        const nl = l - 1
-        if (nl <= 0) setTimeout(() => setPhase('result'), 800)
-        return nl
-      })
+
+      const newLives = Math.max(0, lives - 1)
+      setLives(newLives)
+      setWrongMsg(newLives <= 0 ? 'Nyawa habis!' : 'Bukan itu!')
       setResults(r => [...r, { step: currentStepIdx + 1, stepText: currentStep.stepText, pickedIngredient: slot.name, correct: false }])
-      setTimeout(() => { setWrongCardId(null); setWrongMsg(null); setChefMood('idle') }, 750)
+
+      setTimeout(() => { setWrongCardId(null); setChefMood('idle') }, 750)
+
+      if (newLives <= 0) {
+        setTimeout(() => { setWrongMsg(null); setPhase('result') }, 1100)
+      } else {
+        setTimeout(() => setWrongMsg(null), 1200)
+      }
     }
   }
 
@@ -452,6 +469,7 @@ export default function BhinnekaRasaGame() {
     setChefMood('idle')
     setWrongCardId(null)
     setWrongMsg(null)
+    setWrongPickedIds([])
     const nextStep = cookingSteps[nextIdx]
     setSlots(buildSlots(nextStep.correctIngs, selectedDish!.ingredients))
   }
@@ -480,9 +498,8 @@ export default function BhinnekaRasaGame() {
     <div className="gf min-h-screen relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)' }}>
       <style>{STYLES}</style>
 
-      {/* Floating background emojis */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        {['🌶️','🧄','🍃','🥄','🌿','🧅'].map((e, i) => (
+        {['🌶️', '🧄', '🍃', '🥄', '', '🧅'].map((e, i) => (
           <div key={i} className="absolute text-5xl opacity-5"
             style={{ left: `${10 + i * 16}%`, top: `${15 + (i % 3) * 25}%`, animation: `chefBob ${2 + i * 0.4}s ease-in-out infinite`, animationDelay: `${i * 0.3}s` }}>
             {e}
@@ -490,20 +507,19 @@ export default function BhinnekaRasaGame() {
         ))}
       </div>
 
-      <div className="relative z-10 max-w-2xl mx-auto px-4 py-6">
-        {/* Header with chef */}
+      {/* FIX #11: container lebih lebar di desktop */}
+      <div className="relative z-10 max-w-2xl lg:max-w-4xl mx-auto px-4 py-6">
         <div className="flex flex-col items-center mb-8">
           <ChefCharacter mood="idle" />
           <div className="mt-2 text-center">
-            <h1 className="ff text-5xl md:text-6xl text-white" style={{ textShadow: '0 4px 20px rgba(251,146,60,0.5)' }}>
+            <h1 className="ff text-4xl sm:text-5xl md:text-6xl text-white" style={{ textShadow: '0 4px 20px rgba(251,146,60,0.5)' }}>
               Bhinneka<span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-500">-Rasa</span>
             </h1>
-            <p className="text-slate-300 mt-2">Pilih resep & simulasikan memasak kuliner Medan! 🍳</p>
+            <p className="text-slate-300 mt-2 text-sm sm:text-base">Pilih resep & simulasikan memasak kuliner Medan! 🍳</p>
           </div>
         </div>
 
-        {/* How to play */}
-        <div className="grid grid-cols-3 gap-3 mb-6">
+        <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-6">
           {[
             { icon: '📖', title: 'Baca Langkah', desc: 'Ikuti instruksi masak' },
             { icon: '🥄', title: 'Masukkan Bahan', desc: 'Klik bahan yang tepat' },
@@ -513,29 +529,28 @@ export default function BhinnekaRasaGame() {
               style={{ background: 'rgba(255,255,255,0.06)', backdropFilter: 'blur(8px)' }}>
               <div className="text-2xl mb-1">{item.icon}</div>
               <div className="text-white font-bold text-xs">{item.title}</div>
-              <div className="text-slate-400 text-[11px] mt-0.5">{item.desc}</div>
+              <div className="text-slate-400 text-[11px] mt-0.5 hidden sm:block">{item.desc}</div>
             </div>
           ))}
         </div>
 
-        {/* Recipe list */}
         <h2 className="text-slate-300 font-semibold mb-3 flex items-center gap-2 text-sm">
           <ChefHat className="w-4 h-4 text-amber-400" /> Pilih Resep
         </h2>
-        <div className="space-y-3">
+
+        {/* FIX #11: 2 kolom di desktop */}
+        <div className="space-y-3 md:grid md:grid-cols-2 md:gap-3 md:space-y-0">
           {dishes.length === 0 ? (
-            <div className="text-center py-10 rounded-3xl border border-white/10" style={{ background: 'rgba(255,255,255,0.04)' }}>
+            <div className="text-center py-10 rounded-3xl border border-white/10 md:col-span-2" style={{ background: 'rgba(255,255,255,0.04)' }}>
               <p className="text-slate-400 text-sm">Belum ada resep. Pastikan backend berjalan.</p>
             </div>
           ) : dishes.map(dish => (
             <button key={dish.id} onClick={() => startCooking(dish)}
               className="w-full flex items-center gap-4 p-4 rounded-2xl border border-white/10 hover:border-orange-500/50 transition-all group text-left float-in"
-              style={{ background: 'rgba(255,255,255,0.06)', backdropFilter: 'blur(8px)', transition: 'all 0.2s ease' }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px) scale(1.01)'; (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.1)' }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = ''; (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.06)' }}>
+              style={{ background: 'rgba(255,255,255,0.06)', backdropFilter: 'blur(8px)' }}>
               {dish.image
-                ? <img src={dish.image} alt={dish.name} className="w-16 h-16 rounded-xl object-cover flex-shrink-0" style={{ boxShadow: '0 4px 16px rgba(0,0,0,0.4)' }} />
-                : <div className="w-16 h-16 rounded-xl bg-orange-500/20 flex items-center justify-center text-3xl flex-shrink-0">🍽️</div>}
+                ? <img src={dish.image} alt={dish.name} className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl object-cover flex-shrink-0" style={{ boxShadow: '0 4px 16px rgba(0,0,0,0.4)' }} />
+                : <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-orange-500/20 flex items-center justify-center text-3xl flex-shrink-0">🍽️</div>}
               <div className="flex-1 min-w-0">
                 <div className="text-white font-bold text-base group-hover:text-amber-300 transition-colors">{dish.name}</div>
                 <div className="text-slate-400 text-sm mt-0.5 line-clamp-1">{dish.description}</div>
@@ -554,16 +569,36 @@ export default function BhinnekaRasaGame() {
 
   // ─── PHASE: COOKING ──────────────────────────────────────────────────────────
   if (phase === 'cooking' && selectedDish) {
+    // FIX #6: guard kalau tidak ada steps
+    if (cookingSteps.length === 0) {
+      return (
+        <div className="gf min-h-screen flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #1a0a00 0%, #2d1500 40%, #1a0000 100%)' }}>
+          <style>{STYLES}</style>
+          <div className="text-center p-6">
+            <ChefCharacter mood="sad" />
+            <p className="text-slate-300 mt-4 text-sm">Resep ini belum punya langkah memasak.</p>
+            <button onClick={() => setPhase('select')}
+              className="mt-4 px-6 py-3 rounded-2xl text-white font-bold ff"
+              style={{ background: 'linear-gradient(135deg, #f97316, #fbbf24)' }}>
+              ← Kembali Pilih Resep
+            </button>
+          </div>
+        </div>
+      )
+    }
+
     const currentStep = cookingSteps[currentStepIdx]
-    const hasIngredients = currentStep?.correctIngs.length > 0
-    const progressPct = (currentStepIdx / cookingSteps.length) * 100
+    const hasIngredients = (currentStep?.correctIngs.length || 0) > 0
+    const gameOver = lives <= 0
+    // FIX #7: progress menghitung langkah yang selesai
+    const completedSteps = currentStepIdx + (stepDone || !hasIngredients ? 1 : 0)
+    const progressPct = Math.min(100, (completedSteps / cookingSteps.length) * 100)
 
     return (
       <div className="gf min-h-screen relative overflow-hidden"
         style={{ background: 'linear-gradient(135deg, #1a0a00 0%, #2d1500 40%, #1a0000 100%)' }}>
         <style>{STYLES}</style>
 
-        {/* Floating particles */}
         {particles.map(p => (
           <div key={p.id} className="particle" style={{
             left: p.x, top: p.y,
@@ -574,29 +609,25 @@ export default function BhinnekaRasaGame() {
           </div>
         ))}
 
-        {/* Background kitchen ambiance */}
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-0 left-0 w-full h-1/2" style={{ background: 'linear-gradient(180deg, rgba(120,60,0,0.15) 0%, transparent 100%)' }} />
-          {/* Kitchen tiles suggestion */}
-          <div className="absolute inset-0 opacity-3" style={{
-            backgroundImage: 'repeating-linear-gradient(0deg, rgba(255,255,255,0.03) 0px, rgba(255,255,255,0.03) 1px, transparent 1px, transparent 40px), repeating-linear-gradient(90deg, rgba(255,255,255,0.03) 0px, rgba(255,255,255,0.03) 1px, transparent 1px, transparent 40px)'
-          }} />
         </div>
 
-        <div className="relative z-10 max-w-2xl mx-auto px-4 py-3">
+        <div className="relative z-10 max-w-2xl lg:max-w-3xl mx-auto px-3 sm:px-4 py-3 md:py-6">
           {/* Top HUD */}
           <div className="flex items-center justify-between mb-3">
-            <button onClick={() => setPhase('select')} className="p-2 rounded-xl border border-white/15 hover:bg-white/10 transition-all" style={{ background: 'rgba(255,255,255,0.06)' }}>
+            <button
+              onClick={() => { if (window.confirm('Keluar dari permainan?')) setPhase('select') }}
+              className="p-2 rounded-xl border border-white/15 hover:bg-white/10 transition-all"
+              style={{ background: 'rgba(255,255,255,0.06)' }}>
               <X className="w-5 h-5 text-white" />
             </button>
             <div className="flex items-center gap-2">
-              {/* Lives */}
               <div className="flex items-center gap-1 px-3 py-1.5 rounded-xl border border-white/10" style={{ background: 'rgba(255,255,255,0.06)' }}>
-                {[1,2,3].map(i => (
+                {[1, 2, 3].map(i => (
                   <Heart key={i} className={`w-5 h-5 transition-all duration-300 ${i <= lives ? 'text-red-400 fill-red-400' : 'text-slate-700'}`} />
                 ))}
               </div>
-              {/* Score */}
               <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-amber-500/30 transition-all ${scoreAnim ? 'scale-125' : 'scale-100'}`}
                 style={{ background: 'rgba(251,146,60,0.15)' }}>
                 <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
@@ -611,34 +642,29 @@ export default function BhinnekaRasaGame() {
               <div className="h-full rounded-full transition-all duration-700"
                 style={{ width: `${progressPct}%`, background: 'linear-gradient(90deg, #f97316, #fbbf24)' }} />
             </div>
-            <span className="text-slate-400 text-xs">{currentStepIdx + 1}/{cookingSteps.length}</span>
+            <span className="text-slate-400 text-xs">{Math.min(currentStepIdx + 1, cookingSteps.length)}/{cookingSteps.length}</span>
           </div>
 
-          {/* ── SCENE 3D: Chef + Wok ── */}
+          {/* SCENE 3D */}
           <div className="scene-3d mb-4">
-            {/* Kitchen counter — NO overflow-hidden so speech bubbles can escape */}
             <div className="relative rounded-3xl border border-white/10"
               style={{
                 background: 'linear-gradient(180deg, rgba(80,40,10,0.92) 0%, rgba(40,18,3,0.97) 100%)',
                 transform: 'perspective(600px) rotateX(5deg)',
                 boxShadow: '0 20px 48px rgba(0,0,0,0.85), inset 0 1px 0 rgba(255,255,255,0.08)',
               }}>
-
-              {/* Wood grain texture overlay */}
               <div className="absolute inset-0 rounded-3xl pointer-events-none" style={{
                 backgroundImage: 'repeating-linear-gradient(88deg, rgba(255,255,255,0.025) 0px, transparent 2px, transparent 22px)',
               }} />
 
-              <div className="relative flex items-end justify-around px-6 pt-6 pb-5 gap-4">
-
-                {/* ── Chef column ── */}
-                <div className="flex flex-col items-center gap-0 flex-shrink-0" style={{ minWidth: 110 }}>
-                  {/* Speech bubble — sits ABOVE chef, outside counter clip */}
+              <div className="relative flex items-end justify-around px-4 sm:px-6 pt-6 pb-5 gap-3 sm:gap-4">
+                {/* Chef column */}
+                <div className="flex flex-col items-center gap-0 flex-shrink-0" style={{ minWidth: 100 }}>
                   <div className="relative h-9 flex items-end justify-center mb-1 w-full">
                     {wrongMsg && (
                       <div className="bubble-down-red float-in relative whitespace-nowrap text-xs font-bold px-3 py-1.5 rounded-2xl text-white"
                         style={{ background: 'linear-gradient(135deg,#ef4444,#dc2626)', boxShadow: '0 4px 14px rgba(239,68,68,0.55)' }}>
-                        ❌ Bukan itu!
+                        ❌ {wrongMsg}
                       </div>
                     )}
                     {stepDone && !wrongMsg && (
@@ -651,34 +677,27 @@ export default function BhinnekaRasaGame() {
                   <ChefCharacter mood={chefMood} />
                 </div>
 
-                {/* ── Wok column ── */}
+                {/* Wok column */}
                 <div className="flex flex-col items-center gap-1 flex-shrink-0">
-                  {/* Dish name badge */}
                   <div className="ff text-amber-300 text-sm font-semibold text-center mb-1"
                     style={{ textShadow: '0 2px 8px rgba(251,191,36,0.4)' }}>
                     {selectedDish.name}
                   </div>
-
                   <div ref={wokRef} className="relative">
                     <CookingWok shaking={wokShaking} ingredients={wokIngredients} />
-                    {/* Ripple */}
                     <div key={rippleKey} className="absolute inset-0 flex items-center justify-center pointer-events-none">
                       {rippleKey > 0 && <div className="ripple-circle w-16 h-16 rounded-full border-2 border-amber-400/60" />}
                     </div>
                   </div>
-
-                  {/* +50 score pop */}
                   {scoreAnim && (
-                    <div className="star-pop ff text-green-400 font-bold text-xl pointer-events-none select-none">
-                      +50
-                    </div>
+                    <div className="star-pop ff text-green-400 font-bold text-xl pointer-events-none select-none">+50</div>
                   )}
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Step instruction card */}
+          {/* Step instruction */}
           <div className="rounded-2xl p-4 mb-4 border border-white/10 float-in"
             style={{ background: 'rgba(255,255,255,0.07)', backdropFilter: 'blur(10px)' }}>
             <div className="flex items-start gap-3">
@@ -688,7 +707,6 @@ export default function BhinnekaRasaGame() {
               </div>
               <p className="text-white leading-relaxed text-sm flex-1">{currentStep?.stepText}</p>
             </div>
-            {/* Already picked */}
             {pickedIngredients.length > 0 && (
               <div className="flex flex-wrap gap-1.5 mt-3 pt-3 border-t border-white/10">
                 {pickedIngredients.map(ing => (
@@ -700,40 +718,53 @@ export default function BhinnekaRasaGame() {
             )}
           </div>
 
-          {/* Ingredients grid */}
-          {hasIngredients && !stepDone && (
+          {/* FIX #12: overlay nyawa habis */}
+          {gameOver && (
+            <div className="text-center py-6 rounded-2xl border border-red-500/30 float-in" style={{ background: 'rgba(239,68,68,0.1)' }}>
+              <p className="text-red-300 font-bold ff text-lg">💔 Nyawa habis!</p>
+              <p className="text-slate-400 text-sm mt-1">Menghitung hasil masakan...</p>
+            </div>
+          )}
+
+          {/* Ingredients grid — FIX #1: disabled untuk kartu salah/nyawa 0 */}
+          {hasIngredients && !stepDone && !gameOver && (
             <div>
               <p className="text-slate-400 text-xs mb-3 flex items-center gap-1.5">
                 <ChefHat className="w-3.5 h-3.5 text-amber-400" />
-                Pilih bahan yang dibutuhkan untuk langkah ini:
+                Pilih bahan yang dibutuhkan
+                <span className="ml-1 px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-bold ff">
+                  {pickedIngredients.length}/{currentStep.correctIngs.length}
+                </span>
               </p>
-              <div className="grid grid-cols-4 gap-2">
+
+              {/* Grid kondisional sesuai jumlah kartu */}
+              <div className={`grid gap-1.5 sm:gap-2.5 ${slots.length <= 6 ? 'grid-cols-3'
+                  : slots.length <= 8 ? 'grid-cols-4'
+                    : 'grid-cols-4 sm:grid-cols-5'
+                }`}>
                 {slots.map((slot) => {
                   const isPicked = pickedIngredients.includes(slot.name)
-                  const isWrong = wrongCardId === slot.id
+                  const isWrongTried = wrongPickedIds.includes(slot.id)
+                  const isShaking = wrongCardId === slot.id
                   return (
                     <button key={slot.id}
                       onClick={(e) => handlePickIngredient(slot, e)}
-                      disabled={isPicked}
-                      className={`ingredient-card relative flex flex-col items-center gap-1.5 p-3 rounded-2xl border-2 transition-colors
-                        ${isPicked ? 'opacity-50 cursor-not-allowed border-green-500/40 bg-green-500/10'
-                          : isWrong ? 'card-wrong border-red-400/80 bg-red-500/20'
-                          : 'border-white/15 hover:border-orange-400/70 cursor-pointer'}
-                      `}
-                      style={!isPicked && !isWrong ? { background: 'rgba(255,255,255,0.07)' } : undefined}>
-                      {/* 3D card shine effect */}
-                      {!isPicked && !isWrong && (
-                        <div className="absolute inset-0 rounded-2xl pointer-events-none opacity-0 hover:opacity-100 transition-opacity"
-                          style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.12) 0%, transparent 60%)' }} />
-                      )}
-                      <span className="text-3xl">{slot.emoji}</span>
-                      <span className="text-white text-[10px] font-medium text-center leading-tight">
+                      disabled={isPicked || isWrongTried}
+                      className={`ingredient-card relative flex flex-col items-center gap-1 sm:gap-1.5 p-2 sm:p-3 rounded-2xl border-2 transition-colors select-none touch-manipulation
+              ${isPicked ? 'opacity-50 cursor-not-allowed border-green-500/40 bg-green-500/10'
+                          : isShaking ? 'card-wrong border-red-400/80 bg-red-500/20'
+                            : isWrongTried ? 'opacity-40 cursor-not-allowed border-red-500/30 bg-red-500/10'
+                              : 'border-white/15 hover:border-orange-400/70 cursor-pointer'}
+            `}
+                      style={!isPicked && !isWrongTried && !isShaking ? { background: 'rgba(255,255,255,0.07)' } : undefined}>
+                      <span className="text-2xl sm:text-3xl">{slot.emoji}</span>
+                      <span className="text-white text-[9px] sm:text-[10px] font-medium text-center leading-tight">
                         {slot.name.split('(')[0].replace(/\d+[a-z]*/g, '').trim().slice(0, 18)}
                       </span>
                       {isPicked && <div className="absolute top-1 right-1 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
                         <CheckCircle className="w-3 h-3 text-white" />
                       </div>}
-                      {isWrong && <div className="absolute top-1 right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
+                      {(isShaking || isWrongTried) && <div className="absolute top-1 right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
                         <XCircle className="w-3 h-3 text-white" />
                       </div>}
                     </button>
@@ -743,15 +774,13 @@ export default function BhinnekaRasaGame() {
             </div>
           )}
 
-          {/* No ingredients step */}
-          {!hasIngredients && (
+          {!hasIngredients && !gameOver && (
             <div className="text-center py-4 rounded-2xl border border-white/10" style={{ background: 'rgba(255,255,255,0.05)' }}>
               <p className="text-slate-400 text-sm">🔥 Langkah teknis — tidak ada bahan yang perlu dimasukkan</p>
             </div>
           )}
 
-          {/* Next step button */}
-          {(stepDone || !hasIngredients) && (
+          {(stepDone || !hasIngredients) && !gameOver && (
             <button onClick={handleNextStep}
               className="w-full py-4 mt-4 text-white font-bold text-base rounded-2xl transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-2 float-in pulse-glow ff"
               style={{ background: 'linear-gradient(135deg, #f97316, #fbbf24)', boxShadow: '0 8px 32px rgba(249,115,22,0.4)' }}>
@@ -768,15 +797,15 @@ export default function BhinnekaRasaGame() {
   // ─── PHASE: RESULT ────────────────────────────────────────────────────────────
   const rank = getRank()
   const correctCount = results.filter(r => r.correct).length
+  const wrongCount = results.filter(r => !r.correct).length // FIX #3
 
   return (
     <div className="gf min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
       style={{ background: 'linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)' }}>
       <style>{STYLES}</style>
 
-      {/* Confetti-like bg orbs */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        {['🌟','✨','🎉','⭐','🎊'].map((e, i) => (
+        {['🌟', '✨', '🎉', '⭐', '🎊'].map((e, i) => (
           <div key={i} className="absolute text-4xl opacity-20"
             style={{ left: `${10 + i * 18}%`, top: `${10 + (i % 2) * 60}%`, animation: `chefBob ${1.5 + i * 0.3}s ease-in-out infinite`, animationDelay: `${i * 0.2}s` }}>
             {e}
@@ -785,18 +814,15 @@ export default function BhinnekaRasaGame() {
       </div>
 
       <div className="relative z-10 max-w-lg w-full float-in">
-        {/* Chef celebrating */}
         <div className="flex justify-center mb-4">
           <ChefCharacter mood={correctCount >= cookingSteps.length * 0.7 ? 'celebrate' : 'sad'} />
         </div>
 
-        {/* Rank */}
         <div className="text-center mb-5">
           <h2 className={`ff text-3xl font-bold mb-1 ${rank.color}`}>{rank.label}</h2>
           <p className="text-slate-400 text-sm">Kamu memasak <span className="text-white font-semibold">{selectedDish?.name}</span>!</p>
         </div>
 
-        {/* Score card */}
         <div className="rounded-3xl p-5 mb-4 border border-white/10 float-in" style={{ background: 'rgba(255,255,255,0.07)', backdropFilter: 'blur(12px)' }}>
           <div className="text-center mb-4">
             <div className={`ff text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r ${rank.bg}`}>{score.toLocaleString()}</div>
@@ -805,7 +831,7 @@ export default function BhinnekaRasaGame() {
           <div className="grid grid-cols-3 gap-3">
             {[
               { val: correctCount, label: 'Benar', color: 'text-green-400' },
-              { val: cookingSteps.length - correctCount, label: 'Salah', color: 'text-red-400' },
+              { val: wrongCount, label: 'Salah', color: 'text-red-400' },
               { val: lives, label: 'Nyawa Sisa', color: 'text-amber-400' },
             ].map(item => (
               <div key={item.label} className="text-center rounded-2xl p-3" style={{ background: 'rgba(255,255,255,0.05)' }}>
@@ -816,7 +842,6 @@ export default function BhinnekaRasaGame() {
           </div>
         </div>
 
-        {/* Recap */}
         <div className="rounded-3xl p-4 mb-5 border border-white/10" style={{ background: 'rgba(255,255,255,0.07)' }}>
           <h3 className="text-white font-bold mb-2 flex items-center gap-2 text-sm">
             <Trophy className="w-4 h-4 text-amber-400" /> Rekap Memasak
@@ -836,11 +861,10 @@ export default function BhinnekaRasaGame() {
           </div>
         </div>
 
-        {/* Action buttons */}
         <div className="flex gap-3">
           <button onClick={() => selectedDish && startCooking(selectedDish)}
             className="flex-1 py-4 text-white font-bold rounded-2xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2 ff"
-            style={{ background: `linear-gradient(135deg, #f97316, #fbbf24)`, boxShadow: '0 8px 24px rgba(249,115,22,0.4)' }}>
+            style={{ background: 'linear-gradient(135deg, #f97316, #fbbf24)', boxShadow: '0 8px 24px rgba(249,115,22,0.4)' }}>
             <RefreshCw className="w-5 h-5" /> Masak Lagi
           </button>
           <button onClick={() => setPhase('select')}

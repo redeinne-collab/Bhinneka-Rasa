@@ -41,8 +41,127 @@ router.get('/stats', (req: AuthRequest, res: Response) => {
 });
 
 // ==========================================
+// RESTAURANTS CRUD (Tabel: restaurants)
+// Struktur: id, google_place_id, name, address, latitude, longitude, phone,
+//           website, rating, total_reviews, price_level, opening_hours, photos,
+//           dish_id, dish_name, dish_history, dish_ingredients, dish_nutrition
+// ==========================================
+router.get('/restaurants', (req: AuthRequest, res: Response) => {
+    try {
+        const restaurants = db.prepare('SELECT * FROM restaurants ORDER BY name ASC').all();
+        res.json({ success: true, data: restaurants });
+    } catch (error: any) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+router.get('/restaurants/:id', (req: AuthRequest, res: Response) => {
+    try {
+        const restaurant = db.prepare('SELECT * FROM restaurants WHERE id = ?').get(req.params.id);
+        if (!restaurant) return res.status(404).json({ success: false, message: 'Restoran tidak ditemukan' });
+        res.json({ success: true, data: restaurant });
+    } catch (error: any) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+router.post('/restaurants', (req: AuthRequest, res: Response) => {
+    try {
+        const {
+            google_place_id, name, address, latitude, longitude, phone, website,
+            rating, total_reviews, price_level, opening_hours, photos,
+            dish_id, dish_name, dish_history, dish_ingredients, dish_nutrition
+        } = req.body;
+
+        if (!name) return res.status(400).json({ success: false, message: 'Nama restoran wajib diisi' });
+
+        const stmt = db.prepare(`
+            INSERT INTO restaurants
+            (google_place_id, name, address, latitude, longitude, phone, website,
+             rating, total_reviews, price_level, opening_hours, photos,
+             dish_id, dish_name, dish_history, dish_ingredients, dish_nutrition)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+        const result = stmt.run(
+            google_place_id || `manual-${String(name).toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+            name,
+            address || '',
+            latitude || 0,
+            longitude || 0,
+            phone || '',
+            website || '',
+            rating || 0,
+            total_reviews || 0,
+            price_level || '',
+            opening_hours || '',
+            photos || '',
+            dish_id || null,
+            dish_name || '',
+            dish_history || '',
+            dish_ingredients || '',
+            dish_nutrition || ''
+        );
+        const newRestaurant = db.prepare('SELECT * FROM restaurants WHERE id = ?').get(result.lastInsertRowid);
+        res.status(201).json({ success: true, data: newRestaurant });
+    } catch (error: any) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+router.put('/restaurants/:id', (req: AuthRequest, res: Response) => {
+    try {
+        const { id } = req.params;
+        const {
+            google_place_id, name, address, latitude, longitude, phone, website,
+            rating, total_reviews, price_level, opening_hours, photos,
+            dish_id, dish_name, dish_history, dish_ingredients, dish_nutrition
+        } = req.body;
+
+        const stmt = db.prepare(`
+            UPDATE restaurants SET
+                google_place_id=?, name=?, address=?, latitude=?, longitude=?,
+                phone=?, website=?, rating=?, total_reviews=?, price_level=?,
+                opening_hours=?, photos=?, dish_id=?, dish_name=?, dish_history=?,
+                dish_ingredients=?, dish_nutrition=?
+            WHERE id=?
+        `);
+        stmt.run(
+            google_place_id || null,
+            name,
+            address || '',
+            latitude || 0,
+            longitude || 0,
+            phone || '',
+            website || '',
+            rating || 0,
+            total_reviews || 0,
+            price_level || '',
+            opening_hours || '',
+            photos || '',
+            dish_id || null,
+            dish_name || '',
+            dish_history || '',
+            dish_ingredients || '',
+            dish_nutrition || '',
+            id
+        );
+        const updated = db.prepare('SELECT * FROM restaurants WHERE id = ?').get(id);
+        res.json({ success: true, data: updated });
+    } catch (error: any) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+router.delete('/restaurants/:id', (req: AuthRequest, res: Response) => {
+    try {
+        db.prepare('DELETE FROM restaurants WHERE id = ?').run(req.params.id);
+        res.json({ success: true, message: 'Restaurant deleted successfully' });
+    } catch (error: any) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+// ==========================================
 // DISHES CRUD (Tabel: dishes)
-// Struktur: id, name, history, ingredients, nutrition, created_at, description
 // ==========================================
 router.get('/dishes', (req: AuthRequest, res: Response) => {
     try {
@@ -55,16 +174,21 @@ router.get('/dishes', (req: AuthRequest, res: Response) => {
 
 router.post('/dishes', (req: AuthRequest, res: Response) => {
     try {
-        const { name, description, history, ingredients, nutrition, image, category, price, is_popular } = req.body;
+        const { 
+            name, description, history, ingredients, nutrition, image, 
+            category, price, is_popular, journey, spices, cooking_steps 
+        } = req.body;
 
         if (!name || !description) {
             return res.status(400).json({ success: false, message: 'Nama dan deskripsi wajib diisi' });
         }
 
         const stmt = db.prepare(`
-      INSERT INTO dishes (name, description, history, ingredients, nutrition, image, category, price, is_popular)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
+            INSERT INTO dishes (
+                name, description, history, ingredients, nutrition, image, 
+                category, price, is_popular, journey, spices, cooking_steps
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `);
         const result = stmt.run(
             name,
             description,
@@ -74,7 +198,10 @@ router.post('/dishes', (req: AuthRequest, res: Response) => {
             image || '',
             category || '',
             price || 0,
-            is_popular ? 1 : 0
+            is_popular ? 1 : 0,
+            journey || '',
+            spices || '',
+            cooking_steps || ''
         );
         const newDish = db.prepare('SELECT * FROM dishes WHERE id = ?').get(result.lastInsertRowid);
         res.status(201).json({ success: true, data: newDish });
@@ -86,13 +213,17 @@ router.post('/dishes', (req: AuthRequest, res: Response) => {
 router.put('/dishes/:id', (req: AuthRequest, res: Response) => {
     try {
         const { id } = req.params;
-        const { name, description, history, ingredients, nutrition, image, category, price, is_popular } = req.body;
+        const { 
+            name, description, history, ingredients, nutrition, image, 
+            category, price, is_popular, journey, spices, cooking_steps 
+        } = req.body;
 
         const stmt = db.prepare(`
-      UPDATE dishes 
-      SET name=?, description=?, history=?, ingredients=?, nutrition=?, image=?, category=?, price=?, is_popular=?
-      WHERE id=?
-    `);
+            UPDATE dishes 
+            SET name=?, description=?, history=?, ingredients=?, nutrition=?, 
+                image=?, category=?, price=?, is_popular=?, journey=?, spices=?, cooking_steps=?
+            WHERE id=?
+        `);
         stmt.run(
             name,
             description,
@@ -103,6 +234,9 @@ router.put('/dishes/:id', (req: AuthRequest, res: Response) => {
             category || '',
             price || 0,
             is_popular ? 1 : 0,
+            journey || '',
+            spices || '',
+            cooking_steps || '',
             id
         );
         const updatedDish = db.prepare('SELECT * FROM dishes WHERE id = ?').get(id);

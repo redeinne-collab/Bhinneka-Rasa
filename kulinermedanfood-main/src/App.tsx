@@ -3,14 +3,13 @@ import { BrowserRouter as Router, Routes, Route, useLocation, Navigate, Outlet }
 import { AppProvider } from './context/AppContext'
 import { AuthProvider, useAuth } from './context/AuthContext'
 
-// Components
 import SplashScreen from './components/SplashScreen'
 import Header from './components/Header'
 import BottomNav from './components/BottomNav'
 import DesktopSidebar from './components/DesktopSidebar'
-import AdminLayout from './layouts/AdminLayout' // <-- Import Layout Admin Baru
+import MobileDrawer from './components/MobileDrawer'
+import AdminLayout from './layouts/AdminLayout'
 
-// Pages
 import HomePage from './pages/HomePage'
 import MenuPage from './pages/MenuPage'
 import ChatPage from './pages/ChatPage'
@@ -26,33 +25,44 @@ import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import SettingsPage from './pages/SettingsPage'
 import AboutPage from './pages/AboutPage'
+
+// Admin Pages
 import AdminDashboard from './pages/admin/AdminDashboard'
 import ManageMenu from './pages/admin/ManageMenu'
 import ManagePersonalityQuiz from './pages/admin/ManagePersonalityQuiz'
 import ManageMainQuiz from './pages/admin/ManageMainQuiz'
+import ManageRestaurants from './pages/admin/ManageRestaurants' 
 
-// --- 1. Layout Khusus User (Dengan Sidebar & Bottom Nav) ---
+// Layout user: sidebar di desktop, bottom nav + drawer di mobile
 function UserLayout() {
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const location = useLocation()
+
+  // Tutup drawer otomatis saat pindah halaman
+  useEffect(() => {
+    setDrawerOpen(false)
+  }, [location.pathname])
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-amber-50 to-orange-50">
-      <Header />
+      <Header onOpenMenu={() => setDrawerOpen(true)} />
       <div className="flex">
         <DesktopSidebar />
-        <main className="flex-1 w-full pb-20 md:pb-0 px-4 sm:px-6 lg:px-8">
+        <main className="flex-1 w-full min-w-0 px-4 sm:px-6 lg:px-8 pb-24 md:pb-8">
           <div className="max-w-7xl mx-auto py-4 md:py-6">
-            <Outlet /> {/* Render halaman user di sini */}
+            <Outlet />
           </div>
         </main>
       </div>
       <BottomNav />
+      <MobileDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
     </div>
   )
 }
 
-// --- 2. Proteksi Route Admin ---
 function AdminRoute({ children }: { children: React.ReactNode }) {
   const { isAdmin, loading } = useAuth()
-  
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -60,22 +70,13 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
       </div>
     )
   }
-  
-  if (!isAdmin) {
-    return <Navigate to="/" replace /> // Tendang ke homepage jika bukan admin
-  }
-  
+
+  if (!isAdmin) return <Navigate to="/" replace />
   return <>{children}</>
 }
 
-// --- 3. Konten Utama Aplikasi ---
 function AppContent() {
   const [showSplash, setShowSplash] = useState(true)
-  const location = useLocation()
-  
-  // Route yang TIDAK pakai layout user (full screen)
-  const FULL_SCREEN_ROUTES = ['/map', '/login', '/register']
-  const isFullScreen = FULL_SCREEN_ROUTES.includes(location.pathname)
 
   useEffect(() => {
     const timer = setTimeout(() => setShowSplash(false), 2500)
@@ -86,12 +87,12 @@ function AppContent() {
 
   return (
     <Routes>
-      {/* A. ROUTE FULL SCREEN (Tanpa Sidebar/Header) */}
+      {/* Full screen */}
       <Route path="/map" element={<FoodMap />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
 
-      {/* B. ROUTE USER BIASA (Dengan Sidebar & Bottom Nav) */}
+      {/* User */}
       <Route element={<UserLayout />}>
         <Route path="/" element={<HomePage />} />
         <Route path="/menu" element={<MenuPage />} />
@@ -100,37 +101,35 @@ function AppContent() {
         <Route path="/food/:id" element={<FoodDetail />} />
         <Route path="/akulturasi" element={<DapurAkulturasi />} />
         <Route path="/game" element={<BhinnekaRasaGame />} />
-        
-        {/* Quiz Routes */}
         <Route path="/quiz/main" element={<MainQuiz />} />
         <Route path="/quiz/personality" element={<PersonalityQuiz />} />
         <Route path="/quiz/:id" element={<Navigate to="/quiz/main" replace />} />
-        
-        {/* Profile & Settings */}
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/about" element={<AboutPage />} />
       </Route>
 
-      {/* C. ROUTE ADMIN (Dengan Layout Admin Khusus & Proteksi) */}
-      <Route path="/admin" element={
-        <AdminRoute>
-          <AdminLayout />
-        </AdminRoute>
-      }>
+      {/* Admin */}
+      <Route
+        path="/admin"
+        element={
+          <AdminRoute>
+            <AdminLayout />
+          </AdminRoute>
+        }
+      >
         <Route index element={<AdminDashboard />} />
         <Route path="menu" element={<ManageMenu />} />
         <Route path="personality-quiz" element={<ManagePersonalityQuiz />} />
         <Route path="main-quiz" element={<ManageMainQuiz />} />
+        <Route path="restaurants" element={<ManageRestaurants />} /> {/* <-- BARU: Route Manage Restaurants */}
       </Route>
 
-      {/* Fallback */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
 }
 
-// --- 4. Root App ---
 function App() {
   return (
     <Router>

@@ -40,7 +40,7 @@ export interface Message {
 export async function sendToAI(messages: Message[]): Promise<string> {
   try {
     const response = await groq.chat.completions.create({
-      model: 'llama-3.3-70b-versatile', // Model terbaik & gratis
+      model: 'openai/gpt-oss-120b',
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },
         ...messages

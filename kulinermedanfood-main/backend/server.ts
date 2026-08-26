@@ -8,6 +8,7 @@ import reviewsRouter from './routes/reviews.js';
 import quizRouter from './routes/quiz.js'; 
 import quizResultsRouter from './routes/quizResults.js';
 import adminRouter from './routes/admin.js';
+import aiRoutes from './routes/ai';
 
 dotenv.config();
 
@@ -42,6 +43,7 @@ app.use('/api/chat', chatRouter);
 app.use('/api/reviews', reviewsRouter);
 app.use('/api/quiz', quizRouter);
 app.use('/api/quiz-results', quizResultsRouter);
+app.use('/api/ai', aiRoutes);
 
 app.get('/', (req: Request, res: Response) => {
   res.send(' Kuliner Medan Food Backend is Running!');

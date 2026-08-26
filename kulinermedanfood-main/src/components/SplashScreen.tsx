@@ -1,41 +1,27 @@
+import logo from '../assets/LogoKuliner.png'
+
 export default function SplashScreen() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amber-50 via-orange-50 to-amber-100 animate-fade-in">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amber-50 via-orange-50 to-amber-100 animate-fade-in px-4">
       <div className="text-center animate-scale-in">
-        <div className="w-52 h-52 mx-auto mb-8 relative">
+        {/* Logo — ukuran responsif & proporsional */}
+        <div className="w-44 h-44 sm:w-56 sm:h-56 md:w-72 md:h-72 mx-auto mb-6 md:mb-8 relative">
+          {/* Efek glow di belakang logo */}
           <div className="absolute inset-0 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full blur-xl opacity-30 animate-pulse"></div>
-          <div className="relative w-full h-full border-8 border-amber-700 rounded-full flex items-center justify-center bg-white shadow-2xl">
-            <svg className="w-36 h-36" viewBox="0 0 100 100">
-              <path
-                className="animate-draw-fork"
-                d="M35 20 L35 75 M30 25 L30 35 M35 25 L35 35 M40 25 L40 35 M32 75 L45 90"
-                stroke="#D97706"
-                strokeWidth="4"
-                fill="none"
-                strokeLinecap="round"
-              />
-              <ellipse
-                className="animate-draw-spoon"
-                cx="58"
-                cy="35"
-                rx="12"
-                ry="18"
-                fill="#78350F"
-              />
-              <path
-                d="M58 53 L58 75 L50 85"
-                stroke="#78350F"
-                strokeWidth="4"
-                fill="none"
-                strokeLinecap="round"
-              />
-            </svg>
-          </div>
+
+          <img
+            src={logo}
+            alt="Logo Kuliner Medan"
+            className="relative w-full h-full object-contain drop-shadow-2xl"
+            draggable={false}
+          />
         </div>
-        <h1 className="text-6xl font-bold text-amber-900 tracking-widest mb-3 animate-slide-up drop-shadow-lg">
+
+        {/* Judul — ikut responsif */}
+        <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-amber-900 tracking-widest mb-2 md:mb-3 animate-slide-up drop-shadow-lg">
           BHINNEKA
         </h1>
-        <p className="text-amber-700 tracking-[0.3em] text-sm font-semibold animate-slide-up-delayed uppercase">
+        <p className="text-amber-700 tracking-[0.3em] text-xs md:text-sm font-semibold animate-slide-up-delayed uppercase">
           RASA
         </p>
       </div>

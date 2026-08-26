@@ -3,7 +3,7 @@ import { useNavigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { 
   LayoutDashboard, UtensilsCrossed, Brain, BookOpen, 
-  Users, MessageCircle, Trophy, Home, LogOut, Menu, X
+  LogOut, Menu, X, MapPin 
 } from 'lucide-react';
 
 export default function AdminLayout() {
@@ -25,6 +25,7 @@ export default function AdminLayout() {
   const menuItems = [
     { path: '/admin', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/admin/menu', icon: UtensilsCrossed, label: 'Kelola Menu' },
+    { path: '/admin/restaurants', icon: MapPin, label: 'Kelola Lokasi' }, // <-- TAMBAHKAN BARIS INI
     { path: '/admin/personality-quiz', icon: Brain, label: 'Personality Quiz' },
     { path: '/admin/main-quiz', icon: BookOpen, label: 'Main Quiz' },
   ];
@@ -122,6 +123,7 @@ export default function AdminLayout() {
             >
               <Menu className="w-6 h-6" />
             </button>
+            {/* Opsional: Tambahkan breadcrumb atau judul halaman di sini */}
           </div>
         </header>
 
