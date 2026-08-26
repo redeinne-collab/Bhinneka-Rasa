@@ -10,15 +10,24 @@ import { ChefHat, ArrowRight, Sparkles, TrendingUp, Award, Flame, Star, Utensils
 import API_BASE_URL from '../config/api'
 
 async function fetchDishes(): Promise<Food[]> {
-  const response = await fetch(`${API_BASE_URL}/dishes`)
-  if (!response.ok) {
-    throw new Error('Failed to fetch dishes')
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), 8000) // 8 detik timeout
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/dishes`, { signal: controller.signal })
+    clearTimeout(timeoutId)
+    if (!response.ok) {
+      throw new Error('Failed to fetch dishes')
+    }
+    const result = await response.json()
+    if (!result.success) {
+      throw new Error('API returned success: false')
+    }
+    return result.data as Food[]
+  } catch (err) {
+    clearTimeout(timeoutId)
+    throw err
   }
-  const result = await response.json()
-  if (!result.success) {
-    throw new Error('API returned success: false')
-  }
-  return result.data as Food[]
 }
 
 export default function HomePage() {

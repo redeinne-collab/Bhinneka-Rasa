@@ -188,13 +188,17 @@ export default function FoodMap() {
 
   useEffect(() => {
     async function fetchRestaurants() {
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 8000)
       try {
-        const response = await fetch(`${API_BASE_URL}/restaurants`)
+        const response = await fetch(`${API_BASE_URL}/restaurants`, { signal: controller.signal })
+        clearTimeout(timeoutId)
         const result = await response.json()
         if (result.success) {
           setRestaurants(result.data)
         }
       } catch (error) {
+        clearTimeout(timeoutId)
         console.error('Error fetching restaurants:', error)
       } finally {
         setLoading(false)
