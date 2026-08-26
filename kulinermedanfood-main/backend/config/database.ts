@@ -1,4 +1,4 @@
-import createDatabase from '@databases/sqlite';
+import createDatabase, { sql } from '@databases/sqlite';
 import path from 'path';
 import fs from 'fs';
 import dotenv from 'dotenv';
@@ -19,4 +19,5 @@ console.log('✅ Database path resolved to:', resolvedDbPath);
 
 const db = createDatabase(resolvedDbPath);
 
+export { sql };
 export default db;

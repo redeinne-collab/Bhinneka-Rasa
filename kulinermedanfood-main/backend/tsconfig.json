@@ -10,5 +10,18 @@
     "rootDir": "./"
   },
   "include": ["./**/*.ts", "./**/*.tsx"],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules",
+    "scripts/dedupeMenuItems.ts",
+    "scripts/fixCoordinates.ts",
+    "scripts/resetAdmin.ts",
+    "scripts/seed-quiz.ts",
+    "scripts/seedCookingSteps.ts",
+    "scripts/seedKulinerData.ts",
+    "scripts/seedMenuAndReviews.ts",
+    "scripts/update-coordinates.ts",
+    "scripts/updateFullContent.ts",
+    "scripts/updateManualCoords.ts",
+    "scripts/upgradeDishesSchema.ts"
+  ]
 }
