@@ -2,6 +2,10 @@
 node_modules/
 backend/node_modules/
 
+# Backend lock file — generated per-platform, tidak perlu di-commit
+# Railway akan generate sendiri saat build di Linux
+backend/package-lock.json
+
 # Build output
 dist/
 build/
